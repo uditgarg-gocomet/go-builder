@@ -17,8 +17,8 @@
 - [x] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
 - [x] Apps module
 - [x] Schema module
-- [ ] Registry module
-- [ ] Registry seed script — all primitives
+- [x] Registry module
+- [x] Registry seed script — all primitives
 
 ## Phase 3 — Execution Layer
 - [ ] Endpoint registry module
@@ -58,6 +58,13 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 2.5: Registry module + primitive seeding complete
+- modules/registry/types.ts: Zod schemas — RegisterCustomWidgetSchema, SavePrebuiltViewSchema, DeprecateEntrySchema, PropsSchemaQuerySchema, GetEntriesQuerySchema
+- modules/registry/service.ts: listForApp (COMMON + TENANT_LOCAL for app), getEntry (by name + optional version), getPropsSchema (batch fetch for schema validation), registerCustomWidget (COMMON name collision → 409, TENANT_LOCAL if appId provided), savePrebuiltView (upsert with version increment), deprecate (404 if missing, 409 if already deprecated)
+- modules/registry/router.ts: GET /registry/entries?appId=, GET /registry/entries/:name, GET /registry/props-schema?components=, POST /registry/custom-widget, POST /registry/prebuilt-view, POST /registry/entries/:id/deprecate
+- modules/registry/seed.ts: seeds 34 primitive components across 6 categories (Layout: Stack/Grid/Divider/Card/Tabs/Accordion/Modal; Data: DataTable/Chart/StatCard/Badge/Avatar/Tag; Input: TextInput/NumberInput/Select/MultiSelect/DatePicker/Checkbox/Toggle/RadioGroup/Textarea/FileUpload; Action: Button/IconButton/Link/DropdownMenu; Feedback: Alert/Toast/Spinner/Skeleton/EmptyState/ErrorBoundary; Typography: Heading/Text/RichText) — each with full propsSchema and defaultProps
+- 14 tests (57 total): listForApp COMMON+TENANT_LOCAL, no other-tenant entries, currentVersionDetails populated, DEPRECATED included, getPropsSchema correct schemas, empty list, unknown component, registerCustomWidget TENANT_LOCAL, duplicate COMMON → 409, savePrebuiltView v1.0.0, deprecate happy path, 404, 409 already deprecated, entry persists in DB after deprecation
 
 ### 2026-05-06 — Session 2.4: Schema module complete
 - modules/schema/types.ts: ComponentNodeZ (recursive via z.lazy), PageSchemaZ (full page schema), SaveDraftRequestSchema, PromoteRequestSchema, RollbackRequestSchema, DiffQuerySchema
