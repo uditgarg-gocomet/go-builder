@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 2 IN PROGRESS
+## Status: PHASE 3 COMPLETE — PHASE 4 NEXT
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -24,7 +24,7 @@
 - [x] Endpoint registry module
 - [x] Connector module
 - [x] Assets module
-- [ ] Action logs module
+- [x] Action logs module
 
 ## Phase 4 — Shared Packages
 - [ ] /packages/core — all types + Zod schemas
@@ -58,6 +58,12 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 3.4: Action logs module complete
+- modules/action-logs/types.ts: ActionLogEntrySchema (correlationId optional, all required fields), IngestRequestSchema (max 100 events), QueryFiltersSchema (appId required, pageId/userId/status optional, limit default 50)
+- modules/action-logs/service.ts: ingest() — non-blocking createMany (fire and forget, swallows DB errors via .catch → Sentry warning), query() — findMany with appId/pageId/userId/status filters, ordered by executedAt desc, limited by params.limit
+- modules/action-logs/router.ts: POST /action-logs — validates Bearer token via authService.validateToken (portal or service token), rejects batch > 100 → 400, fires non-blocking ingest, returns 202 immediately; GET /action-logs — requires FDE auth via requireAuth preHandler, validates query with QueryFiltersSchema
+- 9 tests (104 total): POST returns 202 before DB write, batch > 100 → 400, DB failure doesn't affect 202 response, 401 with no token; GET filters by appId/pageId/status, includes correlationId in response, respects limit
 
 ### 2026-05-06 — Session 3.3: Assets module complete
 - modules/assets/storage.ts: StorageProvider interface + LocalStorageProvider (writes to UPLOAD_DIR, serves via CORE_BACKEND_URL/assets/{key}); createStorageProvider() factory — swap via STORAGE_PROVIDER env var
