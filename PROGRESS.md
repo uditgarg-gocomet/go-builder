@@ -15,7 +15,7 @@
 ## Phase 2 — Core Backend Modules
 - [x] Auth module — Part 1: JWT infrastructure + session management (Session 2.1)
 - [x] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
-- [ ] Apps module
+- [x] Apps module
 - [ ] Schema module
 - [ ] Registry module
 - [ ] Registry seed script — all primitives
@@ -67,6 +67,13 @@
 - /.well-known/jwks.json in index.ts updated to use real tokenSigner.getJWKS()
 - 11 tests, all passing: token round-trip, PORTAL token, tamper rejection, refresh rotation, reuse detection, revocation, all-session logout, expiry handling
 - vitest.config.ts created (was missing)
+
+### 2026-05-06 — Session 2.3: Apps module complete
+- modules/apps/types.ts: Zod schemas for CreateApp, UpdateApp, CreatePage, UpdatePage, AddMember, UpdateMemberRole, and all param schemas
+- modules/apps/service.ts: createApp (slug uniqueness + auto-OWNER), listApps (admin sees all / FDE sees member apps), getApp, updateApp, createPage, listPages, updatePage, deletePage (deployment reference check → 409), listMembers, addMember, updateMemberRole, removeMember (last OWNER protection → 409), getDeployment (Renderer build-time fetch with full page version schemas), getMemberRole
+- middleware/auth.ts: extractFDESession (calls authService.validateToken), requireAuth preHandler, requireAppRole(minRole) preHandler factory (ADMIN bypasses, role rank checked)
+- modules/apps/router.ts: all 13 endpoints — POST/GET/PATCH /apps, POST/GET/PATCH/DELETE /apps/:id/pages, GET /apps/slug/:slug/deployment/:env, GET/POST/PATCH/DELETE /apps/:id/members; all with requireAuth + requireAppRole guards
+- 10 tests (30 total): createApp happy path, duplicate slug → 409, delete page no refs, delete page STAGED ref → 409, delete page PUBLISHED ref → 409, remove last OWNER → 409, remove OWNER when multiple OK, remove EDITOR OK, getMemberRole null for non-member, getMemberRole correct role
 
 ### 2026-05-06 — Session 2.2: Auth module Part 2 complete
 - lib/oidcClient.ts: buildOIDCClient (openid-client v5 Issuer.discover), initiateOIDCFlow (PKCE, OAuthState record), handleOIDCCallback (state validation, code exchange, userinfo)
