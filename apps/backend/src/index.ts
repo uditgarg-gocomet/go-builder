@@ -109,26 +109,13 @@ fastify.get('/health', async (_request, reply) => {
 // ── JWKS endpoint ──────────────────────────────────────────────────────────────
 
 fastify.get('/.well-known/jwks.json', async (_request, reply) => {
-  const publicKeyPem = process.env['JWT_PUBLIC_KEY']
-  if (!publicKeyPem) {
+  const { getJWKS } = await import('./modules/auth/lib/tokenSigner.js')
+  try {
+    const jwks = await getJWKS()
+    return reply.status(200).header('Cache-Control', 'public, max-age=3600').send(jwks)
+  } catch {
     return reply.status(503).send({ error: 'JWKS not configured' })
   }
-
-  // Import the RS256 public key and export as JWK
-  const { createPublicKey } = await import('node:crypto')
-  const publicKey = createPublicKey(publicKeyPem.replace(/\\n/g, '\n'))
-  const jwk = publicKey.export({ format: 'jwk' }) as Record<string, unknown>
-
-  return reply.status(200).header('Cache-Control', 'public, max-age=3600').send({
-    keys: [
-      {
-        ...jwk,
-        use: 'sig',
-        alg: 'RS256',
-        kid: process.env['JWT_KEY_ID'] ?? 'portal-key-1',
-      },
-    ],
-  })
 })
 
 // ── Global error handler ───────────────────────────────────────────────────────

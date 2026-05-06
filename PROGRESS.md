@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 1 COMPLETE
+## Status: PHASE 2 IN PROGRESS
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -13,7 +13,8 @@
 - [x] .env.example files for all apps
 
 ## Phase 2 — Core Backend Modules
-- [ ] Auth module
+- [x] Auth module — Part 1: JWT infrastructure + session management (Session 2.1)
+- [ ] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
 - [ ] Apps module
 - [ ] Schema module
 - [ ] Registry module
@@ -57,6 +58,15 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 2.1: Auth module Part 1 complete
+- tokenSigner.ts: RS256 sign/verify with jose, JWKS export, `verifyTokenExpired` for refresh rotation
+- sessionManager.ts: issueSessionTokens (argon2 hashed refresh token), rotateRefreshToken (reuse detection), revokeTokenFamily, revokeAllSessions, isRevoked (Redis fast path + Postgres fallback)
+- router.ts: POST /auth/refresh, POST /auth/logout, POST /auth/validate, GET /auth/jwks
+- service.ts: public interface wrapping all session operations
+- /.well-known/jwks.json in index.ts updated to use real tokenSigner.getJWKS()
+- 11 tests, all passing: token round-trip, PORTAL token, tamper rejection, refresh rotation, reuse detection, revocation, all-session logout, expiry handling
+- vitest.config.ts created (was missing)
 
 ### 2026-05-06 — Phase 1 complete
 - Local Postgres conflict on port 5432 (macOS has Postgres running) → Docker postgres mapped to 5433 host port; internal container port remains 5432; DATABASE_URL uses 5433 for local dev.
