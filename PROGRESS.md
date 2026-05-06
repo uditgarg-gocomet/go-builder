@@ -33,7 +33,8 @@
 - [x] /packages/action-runtime — ActionExecutor + FormManager + EventBus (Session 4.4)
 
 ## Phase 5 — App Builder
-- [ ] Next.js setup + auth middleware
+- [x] Next.js setup + FDE auth + app list (Session 5.1)
+- [ ] Zustand stores + canvas serialization
 - [ ] Canvas + drag and drop
 - [ ] Component panel
 - [ ] Props editor
@@ -59,6 +60,20 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.1: Builder Next.js setup + FDE auth complete
+- next.config.ts: transpilePackages for @portal/ui/core/action-runtime
+- tailwind.config.ts: CSS variable color tokens, content paths include packages/ui
+- middleware.ts: PUBLIC_PATHS=[/login,/auth/callback,/api/auth]; reads session cookie, POST /auth/validate, injects x-fde-user-id + x-fde-role; redirects to /login on 401/failure
+- src/lib/apiClient.ts: server-side apiFetch (reads HttpOnly cookie via next/headers, server-side URL), clientFetch for browser; both attach Authorization header; 401 → redirect /login
+- src/app/login/page.tsx: server component, fetches GET /auth/builder/idps, renders IdPLoginButton for each; links to /auth/init/:idpId?context=BUILDER
+- src/app/auth/callback/[idpId]/page.tsx: client component, reads ?token from params, POSTs to /api/auth/session, redirects to /
+- src/app/api/auth/session/route.ts: POST — sets session cookie (HttpOnly, Secure, SameSite=strict, 8h)
+- src/app/api/auth/logout/route.ts: POST — calls /auth/logout on backend, clears cookie, redirects to /login
+- src/hooks/useSession.ts: client hook, parses JWT from session cookie, returns FDESession { userId, email, role, exp }
+- src/app/page.tsx: redirect to /apps
+- src/app/apps/page.tsx: server component, fetches GET /apps, displays app cards grid; new app link
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 4.4: /packages/action-runtime complete
 - binding/bindingResolver.ts: resolveBinding (strips {{}}, splits on ., handles rows[] array notation), interpolate (deepMap — string|array|object), deepResolve alias; uses BindingContext from @portal/core
