@@ -38,6 +38,8 @@
 - [x] Canvas + drag and drop + component panel (Session 5.3)
 - [x] Props editor + binding input + action bindings (Session 5.4)
 - [x] Page settings — data sources + actions + forms + state (Session 5.5)
+- [x] App settings — theme + IdP + user groups + assets + members (Session 5.6)
+- [ ] Auto-save hook + save status + promote dialog + version history
 - [ ] Data source config UI
 - [ ] Action config UI
 - [ ] Page management
@@ -60,6 +62,15 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.6: App settings — theme + IdP + user groups + assets + members complete
+- ThemePanel: CSS var color pickers (--brand-primary/secondary/surface/text), Google font selector, border-radius input, live preview swatch, PATCH /api/apps/:id/theme
+- IdPPanel: STAGING/PRODUCTION environment tabs, IdP list with enable/disable toggle (PATCH), AddIdPModal — display name, protocol (OIDC/SAML/Google/Okta/Auth0), OIDC fields (issuer URL, client ID/secret), POST /auth/portal-idps/:appId
+- UserGroupPanel: group list with Edit/Delete, GroupModal — name/description/members (add by email, remove); CRUD to /apps/:appId/user-groups endpoints
+- AssetPanel: search + MIME filter, drag-drop upload zone, asset grid (image preview or file icon), click-to-copy URL with "Copied!" overlay, delete button on hover; GET/POST/DELETE /assets
+- MembersPanel: lazy-loaded member list, invite by email + role select, change role dropdown, Remove (blocked when last OWNER); GET/POST/PATCH/DELETE /apps/:appId/members
+- AppSettingsModal: sidebar tab navigation (General | Theme | Authentication | User Groups | Assets | Members), GeneralPanel (name/slug PATCH), backdrop-click to close
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 5.5: Builder page settings — data sources + actions + forms + state complete
 - DataSourcePanel: list + add/edit/delete; DataSourceModal — mode (REGISTERED/CUSTOM_CONNECTOR/CUSTOM_MANUAL), alias, endpointId/URL, transform (JSONata string), polling interval, mock data JSON editor with useMock toggle, POST /endpoints/test + import-as-mock button
