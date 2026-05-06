@@ -35,7 +35,7 @@
 ## Phase 5 — App Builder
 - [x] Next.js setup + FDE auth + app list (Session 5.1)
 - [x] Zustand stores + canvas serialization (Session 5.2)
-- [ ] Canvas + drag and drop
+- [x] Canvas + drag and drop + component panel (Session 5.3)
 - [ ] Component panel
 - [ ] Props editor
 - [ ] Data source config UI
@@ -60,6 +60,18 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.3: Builder canvas + drag-and-drop + component panel complete
+- src/lib/primitives.ts: registerPrimitives(map) + resolvePrimitive(type) — late-binding component registry for SSR safety
+- src/components/canvas/ComponentGhost.tsx: semi-transparent drag overlay label shown in DragOverlay during drag
+- src/components/canvas/DropZone.tsx: useDroppable empty-state drop target, border highlights on isOver
+- src/components/canvas/CanvasToolbar.tsx: breakpoint switcher (Desktop/Tablet/Mobile) + zoom controls (⌘+/-/0); reads useBreakpointStore
+- src/components/canvas/CanvasNodeWrapper.tsx: useDraggable (source=canvas) + useDroppable per node; blue selection ring, gray hover ring, opacity on drag; stopPropagation on click/mouseEnter
+- src/components/canvas/NodeRenderer.tsx: recursive renderer; useResolvedProps merges base props + breakpoint responsive overrides; resolvePrimitive lookup; fallback unknown-component box; DropZone for empty container nodes
+- src/components/canvas/BuilderCanvas.tsx: DndContext + PointerSensor (4px activation); dragStart → sets ghost label; dragEnd → panel source: addNode, canvas source: moveNode; breakpoint-width canvas frame; zoom scaling; DragOverlay
+- src/components/panel/ComponentPanel.tsx: search input + category filter tabs (All + 7 categories); useDraggable tiles (source=panel, type=entry.name); filters by status=ACTIVE; loading spinner + empty state
+- src/hooks/useKeyboardShortcuts.ts: all shortcuts — ⌘Z/⌘⇧Z (undo/redo), Delete/Backspace (delete node), ⌘C (copy), ⌘V (paste), ⌘D (duplicate), ⌘↑/↓ (reorder), ⌘1/2/3 (breakpoints), ⌘S (save), ⌘=/- /0 (zoom), Escape (deselect); skips shortcuts when focus is in input/textarea
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 5.2: Builder Zustand stores + canvas serialization complete
 - src/types/canvas.ts: CanvasNode, DragState, CanvasState, Breakpoint, AppMeta, PageMeta, AppIdentityProvider, AppUserGroup, ClipboardEntry — builder-local types
