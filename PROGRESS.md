@@ -37,7 +37,7 @@
 - [x] Zustand stores + canvas serialization (Session 5.2)
 - [x] Canvas + drag and drop + component panel (Session 5.3)
 - [x] Props editor + binding input + action bindings (Session 5.4)
-- [ ] Props editor
+- [x] Page settings — data sources + actions + forms + state (Session 5.5)
 - [ ] Data source config UI
 - [ ] Action config UI
 - [ ] Page management
@@ -60,6 +60,15 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.5: Builder page settings — data sources + actions + forms + state complete
+- DataSourcePanel: list + add/edit/delete; DataSourceModal — mode (REGISTERED/CUSTOM_CONNECTOR/CUSTOM_MANUAL), alias, endpointId/URL, transform (JSONata string), polling interval, mock data JSON editor with useMock toggle, POST /endpoints/test + import-as-mock button
+- ActionPanel: list + add/edit/delete; ActionModal — name, type selector (19 types), type-specific config forms (API_CALL/NAVIGATE/OPEN_URL/SET_STATE/SHOW_TOAST/SHOW_CONFIRM/TRIGGER_WEBHOOK/RUN_SEQUENCE/RUN_PARALLEL/CONDITIONAL/DELAY/SUBMIT_FORM/RESET_FORM/REFRESH_DATASOURCE); writes to appStore
+- FormPanel: list + add/edit/delete; FormModal — form ID, field list with add/remove, per-field name/label/type/required, submit action selector; resetOnSubmit toggle; writes to appStore
+- StatePanel: inline add form — name/type/defaultValue; list with delete; writes to appStore
+- PageMetaPanel: active page name/slug/order editing; user group checkboxes (from appStore.userGroups); writes to pageStore
+- SettingsSidebar: tabbed container (Data | Actions | Forms | State | Page); open/close prop; mounts all panels
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 5.4: Builder props editor + binding input + action bindings complete
 - src/hooks/useBindingSuggestions.ts: builds autocomplete paths from dataSources (alias + bindingPaths), stateSlots, forms (values/errors/isValid/isSubmitting), user/env context
