@@ -29,6 +29,7 @@
 ## Phase 4 — Shared Packages
 - [x] /packages/core — all types + Zod schemas
 - [x] /packages/ui — Part 1: Layout + Action + Feedback + Typography primitives (Session 4.2)
+- [x] /packages/ui — Part 2: Display + Data + Input primitives (Session 4.3)
 - [ ] /packages/action-runtime — ActionExecutor + FormManager + EventBus
 
 ## Phase 5 — App Builder
@@ -58,6 +59,13 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 4.3: /packages/ui Part 2 complete
+- Display (4): Badge (variant: default/success/warning/error/info/outline, size sm/md), Avatar (src/alt/fallback initials, imgError state), Tag (label/color/removable + onRemove), StatCard (value/previousValue/trend/format number|currency|percent, loading skeleton)
+- Data (2): DataTable (TanStack Table, getCoreRowModel + getSortedRowModel + getPaginationRowModel, sortable columns, searchable, striped, loading/error states, pagination controls, onRowClick), Chart (Recharts — line/bar/area/pie, xKey/yKeys/colors, title/height/showLegend/showGrid)
+- Input (10): TextInput (prefix/suffix/helperText), NumberInput (min/max/step), Select (Radix Select), MultiSelect (custom dropdown + tag display + searchable), DatePicker (react-day-picker, single/range modes, click-outside close), Checkbox (Radix Checkbox, indeterminate state), Toggle (Radix Switch, sm/md/lg sizes, label left/right), RadioGroup (Radix RadioGroup, horizontal/vertical orientation), Textarea (rows/resize/character count/showCount), FileUpload (drag-drop zone, accept/maxSize validation, progress bar)
+- src/index.ts: updated with all 16 new components (4 display + 2 data + 10 input)
+- Build: pnpm --filter @portal/ui build passes — 1.6MB bundle (recharts + react-day-picker bundled)
 
 ### 2026-05-06 — Session 4.2: /packages/ui Part 1 complete
 - vite.config.ts: @vitejs/plugin-react@4 + vite-plugin-dts, ESM + CJS library output; react/react-dom/zod/@portal/core externalized
