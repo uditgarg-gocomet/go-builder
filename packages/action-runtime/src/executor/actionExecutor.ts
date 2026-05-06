@@ -1,58 +1,263 @@
-import type { ActionDef, ExecuteContext, ExecuteResult } from './actionTypes.js'
+import type { ActionDef, BindingContext } from '@portal/core'
+import { interpolate } from '../binding/bindingResolver.js'
+import type { StateManager } from '../state/stateManager.js'
+import type { FormManager } from '../forms/formManager.js'
+import type { ConfirmManager, DataResolver, ExecuteContext, ExecuteResult, ModalManager, RouterAdapter, ToastManager } from './actionTypes.js'
+
+function generateCorrelationId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+export interface ActionExecutorDeps {
+  context: ExecuteContext
+  bindingContext: () => BindingContext
+  stateManager: StateManager
+  formManager: FormManager
+  modalManager: ModalManager
+  toastManager: ToastManager
+  confirmManager: ConfirmManager
+  dataResolver: DataResolver
+  router: RouterAdapter
+  actions: ActionDef[]
+}
 
 export class ActionExecutor {
-  constructor(private readonly context: ExecuteContext) {}
+  private readonly ctx: ExecuteContext
+  private readonly deps: Omit<ActionExecutorDeps, 'context'>
 
-  async execute(action: ActionDef): Promise<ExecuteResult> {
+  constructor({ context, ...deps }: ActionExecutorDeps) {
+    this.ctx = context
+    this.deps = deps
+  }
+
+  async execute(actionId: string, correlationId?: string): Promise<ExecuteResult> {
+    const id = correlationId ?? generateCorrelationId()
+    const action = this.deps.actions.find(a => a.id === actionId)
+    if (!action) {
+      return { actionId, success: false, error: `Action not found: ${actionId}`, durationMs: 0, correlationId: id }
+    }
     const start = Date.now()
+    let success = false
+    let data: unknown
+    let error: string | undefined
+
     try {
-      const data = await this.dispatch(action)
-      return { success: true, data, durationMs: Date.now() - start }
+      data = await this.dispatch(action, id)
+      success = true
     } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-        durationMs: Date.now() - start,
+      error = err instanceof Error ? err.message : String(err)
+    }
+
+    const durationMs = Date.now() - start
+    const result: ExecuteResult = error !== undefined
+      ? { actionId, success, data, error, durationMs, correlationId: id }
+      : { actionId, success, data, durationMs, correlationId: id }
+    this.logResult(result)
+
+    if (success && action.outcomes?.onSuccess) {
+      for (const nextId of action.outcomes.onSuccess) {
+        await this.execute(nextId, id)
+      }
+    } else if (!success && action.outcomes?.onError) {
+      for (const nextId of action.outcomes.onError) {
+        await this.execute(nextId, id)
       }
     }
+
+    return result
   }
 
-  private async dispatch(action: ActionDef): Promise<unknown> {
+  private async dispatch(action: ActionDef, correlationId: string): Promise<unknown> {
+    const bc = this.deps.bindingContext()
+    const cfg = interpolate(action.config as Record<string, unknown>, bc) as Record<string, unknown>
+
     switch (action.type) {
       case 'API_CALL':
-        return this.executeApiCall(action)
-      case 'TRIGGER_WEBHOOK':
-        return this.executeTriggerWebhook(action)
+        return this.apiCall(cfg, correlationId)
+
+      case 'REFRESH_DATASOURCE': {
+        const alias = String(cfg['alias'] ?? '')
+        await this.deps.dataResolver.resolveSourceByAlias(alias)
+        return null
+      }
+
+      case 'NAVIGATE': {
+        const path = String(cfg['path'] ?? '/')
+        this.deps.router.push(path)
+        return null
+      }
+
+      case 'OPEN_URL': {
+        const url = String(cfg['url'] ?? '')
+        const target = String(cfg['target'] ?? '_blank')
+        if (typeof window !== 'undefined') window.open(url, target)
+        return null
+      }
+
+      case 'SET_STATE': {
+        const key = String(cfg['key'] ?? '')
+        this.deps.stateManager.set(key, cfg['value'])
+        return null
+      }
+
+      case 'RESET_STATE': {
+        const key = String(cfg['key'] ?? '')
+        this.deps.stateManager.reset(key)
+        return null
+      }
+
+      case 'TOGGLE_STATE': {
+        const key = String(cfg['key'] ?? '')
+        this.deps.stateManager.toggle(key)
+        return null
+      }
+
+      case 'SHOW_MODAL': {
+        const modalId = String(cfg['modalId'] ?? '')
+        this.deps.modalManager.show(modalId)
+        return null
+      }
+
+      case 'CLOSE_MODAL': {
+        const modalId = String(cfg['modalId'] ?? '')
+        this.deps.modalManager.hide(modalId)
+        return null
+      }
+
+      case 'SHOW_TOAST': {
+        const toastOpts: Parameters<ToastManager['show']>[0] = {
+          title: String(cfg['title'] ?? ''),
+        }
+        if (cfg['description'] != null) toastOpts.description = String(cfg['description'])
+        if (cfg['variant'] != null) toastOpts.variant = String(cfg['variant'])
+        if (cfg['duration'] != null) toastOpts.duration = Number(cfg['duration'])
+        this.deps.toastManager.show(toastOpts)
+        return null
+      }
+
+      case 'SHOW_CONFIRM': {
+        const confirmed = await this.deps.confirmManager.show({
+          title: String(cfg['title'] ?? 'Confirm'),
+          message: String(cfg['message'] ?? ''),
+        })
+        return confirmed
+      }
+
+      case 'SUBMIT_FORM': {
+        const formId = String(cfg['formId'] ?? '')
+        const ok = await this.deps.formManager.submit(formId)
+        if (!ok) throw new Error('Form validation failed')
+        return null
+      }
+
+      case 'RESET_FORM': {
+        const formId = String(cfg['formId'] ?? '')
+        this.deps.formManager.reset(formId)
+        return null
+      }
+
+      case 'SET_FORM_VALUE': {
+        const formId = String(cfg['formId'] ?? '')
+        const field = String(cfg['field'] ?? '')
+        this.deps.formManager.setValue(formId, field, cfg['value'])
+        return null
+      }
+
+      case 'TRIGGER_WEBHOOK': {
+        const url = String(cfg['url'] ?? '')
+        const ac = new AbortController()
+        const timer = setTimeout(() => ac.abort(), 10_000)
+        void fetch(url, {
+          method: String(cfg['method'] ?? 'POST'),
+          headers: { 'Content-Type': 'application/json' },
+          body: cfg['body'] != null ? JSON.stringify(cfg['body']) : null,
+          signal: ac.signal,
+        }).finally(() => clearTimeout(timer))
+        return null
+      }
+
+      case 'RUN_SEQUENCE': {
+        const ids = (cfg['actions'] as string[] | undefined) ?? []
+        const stopOnError = cfg['stopOnError'] !== false
+        let last: unknown = null
+        for (const id of ids) {
+          const res = await this.execute(id, correlationId)
+          if (!res.success && stopOnError) throw new Error(res.error ?? 'Sequence step failed')
+          last = res.data
+        }
+        return last
+      }
+
+      case 'RUN_PARALLEL': {
+        const ids = (cfg['actions'] as string[] | undefined) ?? []
+        const waitForAll = cfg['waitForAll'] !== false
+        const promises = ids.map(id => this.execute(id, correlationId))
+        if (waitForAll) {
+          const results = await Promise.all(promises)
+          return results.map(r => r.data)
+        } else {
+          const result = await Promise.race(promises)
+          return result.data
+        }
+      }
+
+      case 'CONDITIONAL': {
+        const condition = cfg['condition']
+        const truthy = Boolean(condition)
+        const branch = truthy ? (cfg['onTrue'] as string | undefined) : (cfg['onFalse'] as string | undefined)
+        if (branch) await this.execute(branch, correlationId)
+        return truthy
+      }
+
+      case 'DELAY': {
+        const ms = Number(cfg['ms'] ?? 0)
+        await new Promise<void>(resolve => setTimeout(resolve, ms))
+        return null
+      }
+
       default:
-        throw new Error(`Unhandled action type: ${action.type}`)
+        throw new Error(`Unhandled action type: ${String(action.type)}`)
     }
   }
 
-  private async executeApiCall(action: ActionDef): Promise<unknown> {
-    const config = action.config as Record<string, unknown>
-    const res = await fetch(`${this.context.backendUrl}/connector/execute`, {
+  private async apiCall(cfg: Record<string, unknown>, correlationId: string): Promise<unknown> {
+    const res = await fetch(`${this.ctx.backendUrl}/connector/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.context.accessToken}`,
-        'x-correlation-id': this.context.correlationId,
+        Authorization: `Bearer ${this.ctx.accessToken}`,
+        'x-correlation-id': correlationId,
       },
       body: JSON.stringify({
-        appId: this.context.appId,
-        pageId: this.context.pageId,
-        ...config,
+        appId: this.ctx.appId,
+        pageId: this.ctx.pageId,
+        ...cfg,
       }),
     })
     if (!res.ok) throw new Error(`API call failed: ${res.status}`)
-    return res.json()
+    return res.json() as Promise<unknown>
   }
 
-  private async executeTriggerWebhook(action: ActionDef): Promise<void> {
-    const config = action.config as { url: string; method?: string; body?: unknown }
-    void fetch(config.url, {
-      method: config.method ?? 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: config.body ? JSON.stringify(config.body) : undefined,
-    })
+  private logResult(result: ExecuteResult): void {
+    void fetch(`${this.ctx.backendUrl}/action-logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.ctx.accessToken}`,
+      },
+      body: JSON.stringify({
+        events: [{
+          appId: this.ctx.appId,
+          pageId: this.ctx.pageId,
+          userId: this.ctx.userId,
+          actionId: result.actionId,
+          status: result.success ? 'SUCCESS' : 'FAILURE',
+          durationMs: result.durationMs,
+          error: result.error,
+          correlationId: result.correlationId,
+          executedAt: new Date().toISOString(),
+        }],
+      }),
+    }).catch(() => { /* non-blocking, ignore errors */ })
   }
 }

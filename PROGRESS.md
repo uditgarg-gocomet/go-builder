@@ -30,7 +30,7 @@
 - [x] /packages/core — all types + Zod schemas
 - [x] /packages/ui — Part 1: Layout + Action + Feedback + Typography primitives (Session 4.2)
 - [x] /packages/ui — Part 2: Display + Data + Input primitives (Session 4.3)
-- [ ] /packages/action-runtime — ActionExecutor + FormManager + EventBus
+- [x] /packages/action-runtime — ActionExecutor + FormManager + EventBus (Session 4.4)
 
 ## Phase 5 — App Builder
 - [ ] Next.js setup + auth middleware
@@ -59,6 +59,17 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 4.4: /packages/action-runtime complete
+- binding/bindingResolver.ts: resolveBinding (strips {{}}, splits on ., handles rows[] array notation), interpolate (deepMap — string|array|object), deepResolve alias; uses BindingContext from @portal/core
+- state/stateManager.ts: StateManager class — constructor(initialState, dispatch?), get/set/reset/toggle keys, init(slots[]), subscribe/notify listener pattern
+- events/eventBus.ts: ComponentEventBus — on/off/emit/clear, returns unsubscribe from on(); singleton `export const eventBus = new ComponentEventBus()`
+- forms/formValidation.ts: runValidation/runValidations — all ValidationType rules: required, minLength, maxLength, min, max, pattern, email, url, custom (JSONata expression from rule.value, dynamic import)
+- forms/formManager.ts: FormManager — initialize(formDefs, onSync?), setValue(formId, field, value) + async validate, validateField, validateAll (marks all touched), submit (validateAll → return false if invalid), reset (to defaults from FormDef), getState(formId), syncToContext callback, subscribe listener pattern
+- executor/actionTypes.ts: ExecuteContext, ExecuteResult (exactOptionalPropertyTypes-safe), ModalManager, ToastManager, ConfirmManager, DataResolver, RouterAdapter interfaces
+- executor/actionExecutor.ts: ActionExecutor — all 19 action types: API_CALL (POST /connector/execute with x-correlation-id), REFRESH_DATASOURCE (dataResolver.resolveSourceByAlias), NAVIGATE (router.push), OPEN_URL (window.open), SET_STATE/RESET_STATE/TOGGLE_STATE (stateManager), SHOW_MODAL/CLOSE_MODAL (modalManager), SHOW_TOAST (toastManager), SHOW_CONFIRM (confirmManager, returns Promise<boolean>), SUBMIT_FORM/RESET_FORM/SET_FORM_VALUE (formManager), TRIGGER_WEBHOOK (fire-and-forget, 10s AbortController), RUN_SEQUENCE (loop, stopOnError), RUN_PARALLEL (Promise.all/race), CONDITIONAL (branch onTrue/onFalse), DELAY (setTimeout Promise); non-blocking POST to /action-logs after every execution; chained outcome actions (onSuccess/onError)
+- vite.config.ts: Vite library build, ESM+CJS, zod/@portal/core externalized
+- Build: pnpm --filter @portal/action-runtime build passes — 13.6kB ESM + jsonata chunk
 
 ### 2026-05-06 — Session 4.3: /packages/ui Part 2 complete
 - Display (4): Badge (variant: default/success/warning/error/info/outline, size sm/md), Avatar (src/alt/fallback initials, imgError state), Tag (label/color/removable + onRemove), StatCard (value/previousValue/trend/format number|currency|percent, loading skeleton)

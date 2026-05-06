@@ -1,7 +1,7 @@
 type EventHandler = (payload: unknown) => void
 
 export class ComponentEventBus {
-  private handlers = new Map<string, Set<EventHandler>>()
+  private readonly handlers = new Map<string, Set<EventHandler>>()
 
   on(event: string, handler: EventHandler): () => void {
     if (!this.handlers.has(event)) {
@@ -25,3 +25,5 @@ export class ComponentEventBus {
     this.handlers.clear()
   }
 }
+
+export const eventBus = new ComponentEventBus()

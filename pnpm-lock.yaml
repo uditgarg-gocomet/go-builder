@@ -260,6 +260,9 @@ importers:
       '@portal/core':
         specifier: workspace:*
         version: link:../core
+      jsonata:
+        specifier: ^2.0.5
+        version: 2.1.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76

@@ -1,12 +1,14 @@
+import type { BindingContext } from '@portal/core'
+
 const BINDING_PATTERN = /\{\{([^}]+)\}\}/g
 
-export function resolveBinding(expression: string, context: Record<string, unknown>): unknown {
+export function resolveBinding(expression: string, context: BindingContext): unknown {
   const match = expression.match(/^\{\{([^}]+)\}\}$/)
-  if (match?.[1]) {
-    return resolvePath(match[1].trim(), context)
+  if (match?.[1] != null) {
+    return resolvePath(match[1].trim(), context as Record<string, unknown>)
   }
   return expression.replace(BINDING_PATTERN, (_, path: string) => {
-    const value = resolvePath(path.trim(), context)
+    const value = resolvePath(path.trim(), context as Record<string, unknown>)
     return value != null ? String(value) : ''
   })
 }
@@ -15,19 +17,40 @@ function resolvePath(path: string, context: Record<string, unknown>): unknown {
   const parts = path.split('.')
   let current: unknown = context
   for (const part of parts) {
-    if (current == null || typeof current !== 'object') return undefined
+    if (current == null) return undefined
+    // array notation: rows[] — walk into each item and collect values
+    if (part.endsWith('[]')) {
+      const key = part.slice(0, -2)
+      if (typeof current !== 'object') return undefined
+      const arr = (current as Record<string, unknown>)[key]
+      if (!Array.isArray(arr)) return undefined
+      return arr
+    }
+    if (typeof current !== 'object') return undefined
     current = (current as Record<string, unknown>)[part]
   }
   return current
 }
 
-export function deepResolve(obj: unknown, context: Record<string, unknown>): unknown {
-  if (typeof obj === 'string') return resolveBinding(obj, context)
-  if (Array.isArray(obj)) return obj.map((item) => deepResolve(item, context))
-  if (obj !== null && typeof obj === 'object') {
+export function interpolate(value: unknown, context: BindingContext): unknown {
+  if (typeof value === 'string') {
+    if (BINDING_PATTERN.test(value)) {
+      BINDING_PATTERN.lastIndex = 0
+      return resolveBinding(value, context)
+    }
+    return value
+  }
+  if (Array.isArray(value)) {
+    return value.map(item => interpolate(item, context))
+  }
+  if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [k, deepResolve(v, context)])
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, interpolate(v, context)])
     )
   }
-  return obj
+  return value
+}
+
+export function deepResolve(obj: unknown, context: BindingContext): unknown {
+  return interpolate(obj, context)
 }
