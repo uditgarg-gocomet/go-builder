@@ -22,7 +22,7 @@
 
 ## Phase 3 — Execution Layer
 - [x] Endpoint registry module
-- [ ] Connector module
+- [x] Connector module
 - [ ] Assets module
 - [ ] Action logs module
 
@@ -58,6 +58,16 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 3.2: Connector module complete
+- connector/rateLimiter.ts: checkRateLimit — sliding window via Redis pipeline (zremrangebyscore + zcard + zadd), three windows (per-min/hour/day), config cached 5 min in Redis
+- connector/concurrencyLimiter.ts: acquireConcurrencySlot (Lua atomic check+INCR, 60s expiry for leaked lock protection), releaseConcurrencySlot (DECR in finally)
+- connector/cache.ts: getCached/setCached/invalidateEndpointCache — GET+REGISTERED only, reads TTL from EndpointCacheConfig, pattern-based invalidation
+- connector/auditLogger.ts: non-blocking ConnectorRequestLog insert, Sentry warning for >5s, Sentry error for failed requests
+- connector/executor.ts: executeRequest — REGISTERED (validates required path params → 400, resolves connector auth, builds URL), CUSTOM_CONNECTOR (SSRF validation, resolves connector auth), CUSTOM_MANUAL (SSRF validation); 30s timeout → 504, generic fetch error → 502, response size → 413
+- connector/service.ts: connectorService.execute — rate limit check → 429, concurrency acquire → 429, cache hit → skip execution, execute, cache response, invalidate endpoints, audit log; release concurrency in finally
+- connector/router.ts: POST /connector/execute — validates Bearer service token via authService.validateToken
+- 8 tests (83 total): REGISTERED mode auth resolved, deactivated endpoint → 410, CUSTOM_CONNECTOR auth from connector, rate limit → 429, concurrency limit → 429, cache hit skips fetch, timeout → 504, audit log written per request
 
 ### 2026-05-06 — Session 3.1: Endpoint registry module complete
 - modules/endpoint-registry/lib/bindingPaths.ts: computeBindingPaths(schema, prefix) — recursively walks JSON Schema, returns all leaf paths including array item paths with [] notation (e.g. data.rows[].id)
