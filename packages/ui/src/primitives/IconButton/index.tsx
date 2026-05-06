@@ -2,32 +2,34 @@ import React from 'react'
 import { z } from 'zod'
 import { cn } from '../../lib/utils.js'
 
-export const ButtonPropsSchema = z.object({
-  label: z.string().default('Button'),
-  variant: z.enum(['default', 'outline', 'ghost', 'destructive', 'link', 'secondary']).default('default'),
+export const IconButtonPropsSchema = z.object({
+  icon: z.string().default('circle'),
+  ariaLabel: z.string().default(''),
+  variant: z.enum(['default', 'outline', 'ghost', 'destructive']).default('default'),
   size: z.enum(['sm', 'md', 'lg']).default('md'),
   disabled: z.boolean().default(false),
   loading: z.boolean().default(false),
-  fullWidth: z.boolean().default(false),
   className: z.string().optional(),
 })
 
-export type ButtonProps = z.infer<typeof ButtonPropsSchema> & {
+export type IconButtonProps = z.infer<typeof IconButtonPropsSchema> & {
   onClick?: () => void
   style?: React.CSSProperties
+  children?: React.ReactNode
 }
 
-export const buttonManifest = {
-  displayName: 'Button',
+export const iconButtonManifest = {
+  displayName: 'Icon Button',
   category: 'Action',
-  description: 'A clickable button that triggers an action',
-  icon: 'mouse-pointer-click',
-  tags: ['button', 'action', 'click'],
+  description: 'A square button containing only an icon',
+  icon: 'circle-dot',
+  tags: ['button', 'icon', 'action'],
 }
 
-export function Button({ label, variant = 'default', size = 'md', disabled = false, loading = false, fullWidth = false, className, style, onClick }: ButtonProps): React.ReactElement {
+export function IconButton({ ariaLabel, variant = 'default', size = 'md', disabled = false, loading = false, className, style, onClick, children }: IconButtonProps): React.ReactElement {
   return (
     <button
+      aria-label={ariaLabel}
       onClick={onClick}
       disabled={disabled || loading}
       style={style}
@@ -36,25 +38,21 @@ export function Button({ label, variant = 'default', size = 'md', disabled = fal
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         'disabled:pointer-events-none disabled:opacity-50',
         variant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/90',
-        variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         variant === 'outline' && 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         variant === 'ghost' && 'hover:bg-accent hover:text-accent-foreground',
-        variant === 'link' && 'text-primary underline-offset-4 hover:underline',
-        size === 'sm' && 'h-9 px-3 text-sm',
-        size === 'md' && 'h-10 px-4 py-2',
-        size === 'lg' && 'h-11 px-8 text-base',
-        fullWidth && 'w-full',
+        variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        size === 'sm' && 'h-8 w-8',
+        size === 'md' && 'h-10 w-10',
+        size === 'lg' && 'h-12 w-12',
         className,
       )}
     >
       {loading ? (
-        <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
-      ) : null}
-      {label}
+      ) : (children ?? <span className="h-4 w-4" />)}
     </button>
   )
 }

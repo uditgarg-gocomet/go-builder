@@ -28,7 +28,7 @@
 
 ## Phase 4 — Shared Packages
 - [x] /packages/core — all types + Zod schemas
-- [ ] /packages/ui — all primitives + props schemas
+- [x] /packages/ui — Part 1: Layout + Action + Feedback + Typography primitives (Session 4.2)
 - [ ] /packages/action-runtime — ActionExecutor + FormManager + EventBus
 
 ## Phase 5 — App Builder
@@ -58,6 +58,18 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 4.2: /packages/ui Part 1 complete
+- vite.config.ts: @vitejs/plugin-react@4 + vite-plugin-dts, ESM + CJS library output; react/react-dom/zod/@portal/core externalized
+- src/lib/utils.ts: cn() utility (clsx + tailwind-merge)
+- src/hooks/useThemeTokens.ts: injects CSS variables into :root on token change
+- src/hooks/useActionBinding.ts: wraps ActionBinding + ActionExecutor into a memoized callback
+- Layout (7): Stack (flex, direction/gap/align/justify/wrap), Grid (CSS grid, columns/gap/align), Divider (horizontal/vertical), Card (padding/shadow/border/rounded, header+footer slots), Tabs (Radix, items with content slot), Accordion (Radix, single/multiple), Modal (Radix Dialog, size/closeOnOverlay)
+- Action (4): Button (variant/size/loading, updated to spec variants), IconButton (aria-label, same variants as Button), Link (href/target/variant), DropdownMenu (Radix, items with onClick/icon/destructive)
+- Feedback (6): Alert (info/success/warning/error, dismissible), Toast (Radix Toast + ToastProvider), Spinner (size variants), Skeleton (width/height/rounded), EmptyState (icon/title/description/action), ErrorBoundary (React class component, retry button, onError callback)
+- Typography (3): Heading (h1-h6, size/weight/align), Text (p/span/div/label, size/weight/muted/truncate), RichText (TipTap StarterKit, editable flag)
+- All primitives export {Name}PropsSchema (Zod) + {name}Manifest — no barrel naming conflicts
+- Build: pnpm --filter @portal/ui build passes — 717kB ESM bundle
 
 ### 2026-05-06 — Session 4.1: /packages/core complete
 - types/actions.ts: Complete ActionType enum (19 types incl. REFRESH_DATASOURCE, OPEN_URL, RESET_STATE, TOGGLE_STATE, SHOW_CONFIRM, SET_FORM_VALUE, RUN_PARALLEL, DELAY); all per-type config schemas (ApiCallConfig, NavigateConfig, OpenUrlConfig, SetStateConfig, ShowModalConfig, ShowToastConfig, ShowConfirmConfig, RunSequenceConfig, RunParallelConfig, ConditionalConfig, DelayConfig, SetFormValueConfig, TriggerWebhookConfig, etc.); ActionDef, ActionBinding, ActionTrigger, ValidationType, FieldValidationDef, FormFieldDef, FormDef
