@@ -16,7 +16,7 @@
 - [x] Auth module — Part 1: JWT infrastructure + session management (Session 2.1)
 - [x] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
 - [x] Apps module
-- [ ] Schema module
+- [x] Schema module
 - [ ] Registry module
 - [ ] Registry seed script — all primitives
 
@@ -58,6 +58,12 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 2.4: Schema module complete
+- modules/schema/types.ts: ComponentNodeZ (recursive via z.lazy), PageSchemaZ (full page schema), SaveDraftRequestSchema, PromoteRequestSchema, RollbackRequestSchema, DiffQuerySchema
+- modules/schema/service.ts: saveDraft (5MB size guard → 413, registry validation against db.registryEntry → 400, concurrent edit detection 30s window → warning flag, JSON Patch diff via fast-json-patch, version carries over from latest), promoteToStaging + promoteToProduction (semver.inc for bump, STAGING requires DRAFT → 409, PRODUCTION requires STAGED → 409, creates Deployment PENDING + DeploymentPage, fires HMAC-SHA256 webhook async, updates to BUILDING), rollback (PUBLISHED → ROLLED_BACK, target → PUBLISHED, PRODUCTION deployment + webhook), getHistory, getDiff (uses stored diffFromPrev if available, else computes), triggerBuild (HMAC-SHA256 signed, x-build-signature header)
+- modules/schema/router.ts: POST /schema/draft, POST /schema/:versionId/promote/staging, POST /schema/:versionId/promote/production, POST /schema/:pageId/rollback, GET /schema/:pageId/history, GET /schema/:pageId/diff?from=&to=
+- 13 tests (43 total): saveDraft happy path, registry validation failure → 400, concurrent edit warning, no warning on own drafts, semver minor bump, semver patch bump, staging rejects non-DRAFT → 409, production rejects non-STAGED → 409, rollback state transitions, rollback fires webhook, HMAC signature correctness, webhook payload shape
 
 ### 2026-05-06 — Session 2.1: Auth module Part 1 complete
 - tokenSigner.ts: RS256 sign/verify with jose, JWKS export, `verifyTokenExpired` for refresh rotation
