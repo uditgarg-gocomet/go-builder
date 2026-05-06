@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 3 COMPLETE — PHASE 4 NEXT
+## Status: PHASE 4 IN PROGRESS
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -27,7 +27,7 @@
 - [x] Action logs module
 
 ## Phase 4 — Shared Packages
-- [ ] /packages/core — all types + Zod schemas
+- [x] /packages/core — all types + Zod schemas
 - [ ] /packages/ui — all primitives + props schemas
 - [ ] /packages/action-runtime — ActionExecutor + FormManager + EventBus
 
@@ -58,6 +58,16 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 4.1: /packages/core complete
+- types/actions.ts: Complete ActionType enum (19 types incl. REFRESH_DATASOURCE, OPEN_URL, RESET_STATE, TOGGLE_STATE, SHOW_CONFIRM, SET_FORM_VALUE, RUN_PARALLEL, DELAY); all per-type config schemas (ApiCallConfig, NavigateConfig, OpenUrlConfig, SetStateConfig, ShowModalConfig, ShowToastConfig, ShowConfirmConfig, RunSequenceConfig, RunParallelConfig, ConditionalConfig, DelayConfig, SetFormValueConfig, TriggerWebhookConfig, etc.); ActionDef, ActionBinding, ActionTrigger, ValidationType, FieldValidationDef, FormFieldDef, FormDef
+- types/datasource.ts: PollingDef, ErrorHandlingDef, TransformDef, QueryDef; complete DataSourceDef (REGISTERED/CUSTOM_CONNECTOR/CUSTOM_MANUAL modes); ConnectorConfig; ComponentDataSource (with pagination/sorting/filtering config); BindingContext (datasource/params/user/env/state/form)
+- types/schema.ts: ComponentNode (recursive via z.lazy, exactOptionalPropertyTypes-safe interface); PageSchema (dataSources/actions/forms now fully typed); StyleOverride, ResponsiveOverride, StateSlotDef, ThemeOverride, PageParamDef
+- types/registry.ts: Added PropsSchemaMap type
+- types/auth.ts, types/api.ts: Completed with Paginated<T> generic TypeScript type
+- zod/schema.ts + zod/auth.ts: Z-suffix re-exports for action-runtime and renderer consumption
+- vite.config.ts: Vite + vite-plugin-dts, ESM + CJS output
+- Build: pnpm --filter @portal/core build passes — 13kB ESM + CJS + declaration files
 
 ### 2026-05-06 — Session 3.4: Action logs module complete
 - modules/action-logs/types.ts: ActionLogEntrySchema (correlationId optional, all required fields), IngestRequestSchema (max 100 events), QueryFiltersSchema (appId required, pageId/userId/status optional, limit default 50)

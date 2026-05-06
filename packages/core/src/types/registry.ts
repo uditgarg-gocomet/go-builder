@@ -56,3 +56,6 @@ export type SourceType = z.infer<typeof SourceTypeSchema>
 export type ComponentManifest = z.infer<typeof ComponentManifestSchema>
 export type RegistryEntryVersion = z.infer<typeof RegistryEntryVersionSchema>
 export type RegistryEntry = z.infer<typeof RegistryEntrySchema>
+
+// Map of component name → propsSchema (used for batch schema validation)
+export type PropsSchemaMap = Record<string, unknown>

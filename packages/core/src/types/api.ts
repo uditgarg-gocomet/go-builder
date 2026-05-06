@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+// ── Generic paginated response ────────────────────────────────────────────────
+
 export const PaginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
@@ -14,21 +16,33 @@ export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
     totalPages: z.number().int().nonnegative(),
   })
 
+export type Paginated<T> = {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+// ── Standard error response ───────────────────────────────────────────────────
+
 export const ErrorResponseSchema = z.object({
   error: z.string(),
-  message: z.string(),
+  message: z.string().optional(),
   statusCode: z.number(),
   correlationId: z.string().optional(),
 })
 
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
+
+// ── Health check ──────────────────────────────────────────────────────────────
+
 export const HealthResponseSchema = z.object({
-  status: z.enum(['ok', 'degraded', 'down']),
-  postgres: z.enum(['ok', 'error']),
-  redis: z.enum(['ok', 'error']),
+  status: z.enum(['healthy', 'degraded', 'down']),
+  service: z.string(),
   timestamp: z.string(),
-  version: z.string(),
+  checks: z.record(z.string(), z.object({ status: z.enum(['ok', 'error']) })).optional(),
 })
 
-export type Pagination = z.infer<typeof PaginationSchema>
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
 export type HealthResponse = z.infer<typeof HealthResponseSchema>
+export type Pagination = z.infer<typeof PaginationSchema>
