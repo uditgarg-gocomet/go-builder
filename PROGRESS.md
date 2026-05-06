@@ -36,7 +36,7 @@
 - [x] Next.js setup + FDE auth + app list (Session 5.1)
 - [x] Zustand stores + canvas serialization (Session 5.2)
 - [x] Canvas + drag and drop + component panel (Session 5.3)
-- [ ] Component panel
+- [x] Props editor + binding input + action bindings (Session 5.4)
 - [ ] Props editor
 - [ ] Data source config UI
 - [ ] Action config UI
@@ -60,6 +60,16 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.4: Builder props editor + binding input + action bindings complete
+- src/hooks/useBindingSuggestions.ts: builds autocomplete paths from dataSources (alias + bindingPaths), stateSlots, forms (values/errors/isValid/isSubmitting), user/env context
+- src/components/props/BindingInput.tsx: textarea that opens suggestion dropdown on {{ trigger; filters by typed query; selects by replacing last {{ prefix with {{path}}; click-outside closes
+- src/components/props/StaticInput.tsx: routes by Zod type — ZodString→text, ZodNumber→number, ZodBoolean→checkbox, ZodEnum→select, ZodArray→ArrayEditor (add/remove items), ZodObject→JsonEditor (textarea with JSON parse validation); unwraps ZodOptional/ZodNullable/ZodDefault
+- src/components/props/PropField.tsx: label + Static/{{}} mode toggle switch; static → StaticInput, binding → BindingInput; writes to canvasStore updateProps / updateBinding
+- src/components/props/ActionsEditor.tsx: lists COMMON_TRIGGERS (onClick/onChange/onSubmit/onBlur/onFocus); each trigger shows bound action name or "+ Bind action"; click opens inline action selector dropdown; bindAction writes to canvasStore updateActions
+- src/components/props/StyleEditor.tsx: collapsible section; 8 style props (padding/margin/width/height/background/border/borderRadius/display); responsive-aware — writes to node.responsive.tablet|mobile when breakpoint ≠ desktop; shows "responsive" badge when overrides exist
+- src/components/props/PropsEditor.tsx: right panel; reads selectedNodeId + node from canvasStore; finds registry entry → propsSchema.shape → renders PropField per key; ActionsEditor + StyleEditor sections; empty state when no node selected
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 5.3: Builder canvas + drag-and-drop + component panel complete
 - src/lib/primitives.ts: registerPrimitives(map) + resolvePrimitive(type) — late-binding component registry for SSR safety
