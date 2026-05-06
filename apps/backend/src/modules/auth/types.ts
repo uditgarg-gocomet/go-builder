@@ -64,3 +64,60 @@ export interface ValidateResponse {
   payload?: FDESessionToken | PortalSessionToken
   reason?: string
 }
+
+// ── IdP management schemas ────────────────────────────────────────────────────
+
+export const CreateBuilderIdPSchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(['GOOGLE', 'OKTA', 'SAML', 'OIDC', 'AUTH0', 'MAGIC_LINK', 'USERNAME_PASSWORD']),
+  label: z.string().min(1),
+  config: z.record(z.unknown()),
+  isActive: z.boolean().optional().default(true),
+})
+
+export const UpdateBuilderIdPSchema = z.object({
+  name: z.string().min(1).optional(),
+  label: z.string().min(1).optional(),
+  config: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
+})
+
+export const CreateAppIdPSchema = z.object({
+  appId: z.string().min(1),
+  environment: z.enum(['STAGING', 'PRODUCTION']),
+  type: z.enum(['GOOGLE', 'OKTA', 'SAML', 'OIDC', 'AUTH0', 'MAGIC_LINK', 'USERNAME_PASSWORD']),
+  label: z.string().min(1),
+  config: z.record(z.unknown()),
+  isEnabled: z.boolean().optional().default(true),
+  order: z.number().int().min(0).optional().default(0),
+  createdBy: z.string().min(1),
+})
+
+export const UpdateAppIdPSchema = z.object({
+  label: z.string().min(1).optional(),
+  config: z.record(z.unknown()).optional(),
+  isEnabled: z.boolean().optional(),
+  order: z.number().int().min(0).optional(),
+})
+
+export const PortalIdPsQuerySchema = z.object({
+  appId: z.string().min(1),
+  env: z.enum(['STAGING', 'PRODUCTION']),
+})
+
+export const InitiateFlowQuerySchema = z.object({
+  context: z.enum(['BUILDER', 'PORTAL']),
+  appId: z.string().optional(),
+  env: z.enum(['STAGING', 'PRODUCTION']).optional(),
+  redirectTo: z.string().min(1).default('/'),
+})
+
+export const OIDCCallbackQuerySchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+})
+
+export const ServiceTokenRequestSchema = z.object({
+  serviceId: z.string().min(1),
+  serviceSecret: z.string().min(1),
+})

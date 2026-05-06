@@ -14,7 +14,7 @@
 
 ## Phase 2 — Core Backend Modules
 - [x] Auth module — Part 1: JWT infrastructure + session management (Session 2.1)
-- [ ] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
+- [x] Auth module — Part 2: OIDC + SAML + IdP management (Session 2.2)
 - [ ] Apps module
 - [ ] Schema module
 - [ ] Registry module
@@ -67,6 +67,14 @@
 - /.well-known/jwks.json in index.ts updated to use real tokenSigner.getJWKS()
 - 11 tests, all passing: token round-trip, PORTAL token, tamper rejection, refresh rotation, reuse detection, revocation, all-session logout, expiry handling
 - vitest.config.ts created (was missing)
+
+### 2026-05-06 — Session 2.2: Auth module Part 2 complete
+- lib/oidcClient.ts: buildOIDCClient (openid-client v5 Issuer.discover), initiateOIDCFlow (PKCE, OAuthState record), handleOIDCCallback (state validation, code exchange, userinfo)
+- lib/samlClient.ts: initiateSAMLFlow (samlify SP createLoginRequest, SAMLState record), handleSAMLCallback (parseLoginResponse, signature validation)
+- lib/openFGASync.ts: syncUserGroups — writes AppUserGroupMember tuples to OpenFGA; failure is non-throwing (Sentry + log)
+- router.ts: GET /auth/builder/idps, GET /auth/portal/idps, GET /auth/init/:idpId, GET /auth/callback/oidc/:idpId, POST /auth/callback/saml/:idpId, POST /auth/service-token; also CRUD routes for builder + portal IdPs
+- service.ts: listBuilderIdPs, createBuilderIdP, updateBuilderIdP, listAppIdPs, listEnabledAppIdPs, createAppIdP (encrypts config via secretsProvider), updateAppIdP, toggleAppIdP, getAppIdPConfig/getBuilderIdPConfig
+- 9 new tests (20 total passing): OAuthState creation + TTL, SAMLState creation, enabled IdP filtering, disabled IdP exclusion, OpenFGA sync success + failure non-throwing + empty-membership skip
 
 ### 2026-05-06 — Phase 1 complete
 - Local Postgres conflict on port 5432 (macOS has Postgres running) → Docker postgres mapped to 5433 host port; internal container port remains 5432; DATABASE_URL uses 5433 for local dev.
