@@ -34,7 +34,7 @@
 
 ## Phase 5 — App Builder
 - [x] Next.js setup + FDE auth + app list (Session 5.1)
-- [ ] Zustand stores + canvas serialization
+- [x] Zustand stores + canvas serialization (Session 5.2)
 - [ ] Canvas + drag and drop
 - [ ] Component panel
 - [ ] Props editor
@@ -60,6 +60,19 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 5.2: Builder Zustand stores + canvas serialization complete
+- src/types/canvas.ts: CanvasNode, DragState, CanvasState, Breakpoint, AppMeta, PageMeta, AppIdentityProvider, AppUserGroup, ClipboardEntry — builder-local types
+- src/stores/canvasStore.ts: useCanvasStore — zundo temporal (limit 50, partialize nodes+childMap+parentMap) + immer; addNode/moveNode/updateProps/updateBinding/updateStyle/updateResponsive/updateActions/deleteNode (recursive descendants); selectNode/setHoveredNode/setDragState; insertSubtree (for paste); loadCanvas; undo/redo via temporal
+- src/stores/pageStore.ts: usePageStore — pages[], activePageId; setActivePage/addPage/updatePage/deletePage/reorderPages/setPages
+- src/stores/appStore.ts: useAppStore — app/theme/dataSources/actions/forms/stateSlots/idProviders/userGroups; all CRUD actions
+- src/stores/registryStore.ts: useRegistryStore — entries[]/isLoading; fetchEntries(appId) → GET /registry/entries
+- src/stores/breakpointStore.ts: useBreakpointStore — active: desktop|tablet|mobile; setActive
+- src/stores/clipboardStore.ts: useClipboardStore — sessionStorage persist; copy(nodeId, canvas) extracts subtree; paste() remaps all IDs to fresh UUIDs; returns remapped subtree for canvasStore.insertSubtree
+- src/lib/schema/createNode.ts: createNode(type, source, registryEntry) — creates CanvasNode with defaultProps from registry version
+- src/lib/schema/serialize.ts: serializeCanvasToSchema(canvas, page, app, options) — walks childMap from rootId, builds ComponentNode tree, returns PageSchema
+- src/lib/schema/deserialize.ts: deserializeSchemaToCanvas(schema) — flattens ComponentNode tree into normalized nodes/childMap/parentMap maps
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-06 — Session 5.1: Builder Next.js setup + FDE auth complete
 - next.config.ts: transpilePackages for @portal/ui/core/action-runtime
