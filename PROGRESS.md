@@ -21,7 +21,7 @@
 - [x] Registry seed script — all primitives
 
 ## Phase 3 — Execution Layer
-- [ ] Endpoint registry module
+- [x] Endpoint registry module
 - [ ] Connector module
 - [ ] Assets module
 - [ ] Action logs module
@@ -58,6 +58,14 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 3.1: Endpoint registry module complete
+- modules/endpoint-registry/lib/bindingPaths.ts: computeBindingPaths(schema, prefix) — recursively walks JSON Schema, returns all leaf paths including array item paths with [] notation (e.g. data.rows[].id)
+- modules/endpoint-registry/lib/ssrf.ts: validateUrl(url) — blocks localhost, 127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.169.254 (AWS metadata), 0.0.0.0, metadata.google.internal → throws 403; non-http/https → 403; invalid URL → 400
+- modules/endpoint-registry/types.ts: RegisterConnectorSchema, RegisterEndpointSchema, UpdateEndpointSchema, TestEndpointSchema with ParamDefSchema
+- modules/endpoint-registry/service.ts: listConnectors, registerConnector (SSRF-validates base URLs, encrypts authConfig via secretsProvider), listConnectorEndpoints, getEndpoint, registerEndpoint (auto-computes bindingPaths from responseSchema), updateEndpoint (recomputes paths on responseSchema change), deactivateEndpoint (soft delete isActive=false), testEndpoint (REGISTERED/CUSTOM_CONNECTOR/CUSTOM_MANUAL modes, 30s timeout → 504, required path param validation → 400, SSRF validation, async custom endpoint usage logging)
+- modules/endpoint-registry/router.ts: GET/POST /endpoints/connectors, GET /endpoints/connectors/:id/endpoints, POST /endpoints/test, POST /endpoints/, GET/PATCH/DELETE /endpoints/:id
+- 18 tests (75 total): computeBindingPaths flat/nested/array cases, validateUrl SSRF cases (all private ranges), registerConnector auth encrypted, registerConnector SSRF rejected, registerEndpoint binding paths computed, connector not found → 404, testEndpoint missing path param → 400, SSRF blocked, timeout → 504, custom endpoint usage logged
 
 ### 2026-05-06 — Session 2.5: Registry module + primitive seeding complete
 - modules/registry/types.ts: Zod schemas — RegisterCustomWidgetSchema, SavePrebuiltViewSchema, DeprecateEntrySchema, PropsSchemaQuerySchema, GetEntriesQuerySchema
