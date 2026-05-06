@@ -23,7 +23,7 @@
 ## Phase 3 — Execution Layer
 - [x] Endpoint registry module
 - [x] Connector module
-- [ ] Assets module
+- [x] Assets module
 - [ ] Action logs module
 
 ## Phase 4 — Shared Packages
@@ -58,6 +58,14 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-06 — Session 3.3: Assets module complete
+- modules/assets/storage.ts: StorageProvider interface + LocalStorageProvider (writes to UPLOAD_DIR, serves via CORE_BACKEND_URL/assets/{key}); createStorageProvider() factory — swap via STORAGE_PROVIDER env var
+- modules/assets/validator.ts: validateFile — allowed MIME types (png/jpeg/svg/webp/gif/woff2/woff/pdf), 10MB size limit → 413, extension/MIME mismatch, SVG <script tag rejection → 400
+- modules/assets/service.ts: handleUpload (SHA-256 content-addressed key apps/{appId}/{hash}{ext}, deduplication via key uniqueness check, sharp image dimension extraction for image/* except SVG), checkAssetReferenced (raw Postgres jsonb query on PageVersion schema column), listAssets (filter by mimeType/search), deleteAsset (reference check → 409)
+- modules/assets/router.ts: POST /assets/upload (multipart, x-app-id header), GET /assets?appId=&mimeType=&search=, DELETE /assets/:id, GET /assets/* (serve file with Cache-Control: public, max-age=31536000, immutable)
+- Dependencies added: sharp, mime-types, @types/mime-types
+- 12 tests (95 total): validateFile accepts PNG, rejects 10MB+, rejects bad MIME, rejects SVG+script, accepts clean SVG; handleUpload deduplication, image dimensions extracted, SVG+script → 400, 10MB+ → 413; deleteAsset not referenced, referenced → 409, not found → 404
 
 ### 2026-05-06 — Session 3.2: Connector module complete
 - connector/rateLimiter.ts: checkRateLimit — sliding window via Redis pipeline (zremrangebyscore + zcard + zadd), three windows (per-min/hour/day), config cached 5 min in Redis
