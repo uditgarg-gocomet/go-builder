@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: portal_postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portal_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-portal_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-portal} -d ${POSTGRES_DB:-portal_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: portal_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret} --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: portal_openfga
+    restart: unless-stopped
+    ports:
+      - "${OPENFGA_HTTP_PORT:-8080}:8080"
+      - "${OPENFGA_GRPC_PORT:-8081}:8081"
+      - "${OPENFGA_PLAYGROUND_PORT:-3000}:3000"
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://${POSTGRES_USER:-portal}:${POSTGRES_PASSWORD:-portal_secret}@postgres:5432/${POSTGRES_DB:-portal_db}?sslmode=disable
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8080
+      OPENFGA_GRPC_ADDR: 0.0.0.0:8081
+      OPENFGA_PLAYGROUND_ENABLED: "true"
+      OPENFGA_LOG_FORMAT: json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "grpc_health_probe", "-addr=:8081"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    command: run
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

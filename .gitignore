@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+.turbo/
+
+# Environment files — never commit
+.env
+.env.local
+.env.*.local
+
+# Prisma
+apps/backend/prisma/migrations/*.sql
+
+# Uploads (local storage)
+apps/backend/uploads/
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/

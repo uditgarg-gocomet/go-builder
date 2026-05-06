@@ -1,0 +1,577 @@
+// This is the canonical Prisma schema for the Client Portal App Builder platform.
+// Source of truth: /docs/poc-scope.md — Data Model section.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── FDE Users ────────────────────────────────────────────────────────────────
+
+model FDEUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      FDERole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum FDERole {
+  ADMIN
+  FDE
+}
+
+// ─── App + Page ───────────────────────────────────────────────────────────────
+
+model App {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages       Page[]
+  members     AppMember[]
+  deployments Deployment[]
+  dataSources DataSource[]
+  idProviders AppIdentityProvider[]
+  userGroups  AppUserGroup[]
+  assets      Asset[]
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  appId     String
+  name      String
+  slug      String
+  order     Int
+  createdAt DateTime @default(now())
+
+  app       App      @relation(fields: [appId], references: [id])
+  versions  PageVersion[]
+  comments  NodeComment[]
+  analytics AnalyticsEvent[]
+
+  @@unique([appId, slug])
+}
+
+// ─── App-level Data Sources ───────────────────────────────────────────────────
+
+model DataSource {
+  id        String   @id @default(cuid())
+  appId     String
+  alias     String
+  config    Json
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  app       App      @relation(fields: [appId], references: [id])
+
+  @@unique([appId, alias])
+}
+
+// ─── Schema Versioning ────────────────────────────────────────────────────────
+
+model PageVersion {
+  id           String            @id @default(cuid())
+  pageId       String
+  version      String
+  schema       Json
+  status       PageVersionStatus
+  changelog    String?
+  diffFromPrev Json?
+  createdBy    String
+  createdAt    DateTime          @default(now())
+  promotedAt   DateTime?
+  promotedBy   String?
+
+  page         Page              @relation(fields: [pageId], references: [id])
+  deployments  DeploymentPage[]
+
+  @@unique([pageId, version])
+  @@index([pageId, status])
+}
+
+enum PageVersionStatus {
+  DRAFT
+  STAGED
+  PUBLISHED
+  ARCHIVED
+  ROLLED_BACK
+}
+
+model Deployment {
+  id          String      @id @default(cuid())
+  appId       String
+  environment Environment
+  buildStatus BuildStatus
+  deployedBy  String
+  deployedAt  DateTime    @default(now())
+
+  app         App         @relation(fields: [appId], references: [id])
+  pages       DeploymentPage[]
+}
+
+model DeploymentPage {
+  deploymentId  String
+  pageVersionId String
+
+  deployment    Deployment  @relation(fields: [deploymentId], references: [id])
+  pageVersion   PageVersion @relation(fields: [pageVersionId], references: [id])
+
+  @@id([deploymentId, pageVersionId])
+}
+
+enum Environment {
+  STAGING
+  PRODUCTION
+}
+
+enum BuildStatus {
+  PENDING
+  BUILDING
+  SUCCESS
+  FAILED
+}
+
+// ─── Access Control ───────────────────────────────────────────────────────────
+
+model AppMember {
+  id      String   @id @default(cuid())
+  appId   String
+  userId  String
+  role    AppRole
+  addedBy String
+  addedAt DateTime @default(now())
+
+  app     App      @relation(fields: [appId], references: [id])
+
+  @@unique([appId, userId])
+}
+
+enum AppRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model AppUserGroup {
+  id          String   @id @default(cuid())
+  appId       String
+  name        String
+  description String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  app         App      @relation(fields: [appId], references: [id])
+  members     AppUserGroupMember[]
+
+  @@unique([appId, name])
+}
+
+model AppUserGroupMember {
+  id         String       @id @default(cuid())
+  groupId    String
+  identifier String
+  addedBy    String
+  addedAt    DateTime     @default(now())
+
+  group      AppUserGroup @relation(fields: [groupId], references: [id])
+
+  @@unique([groupId, identifier])
+}
+
+// ─── Registry ─────────────────────────────────────────────────────────────────
+
+model RegistryEntry {
+  id             String        @id @default(cuid())
+  name           String
+  type           ComponentType
+  scope          RegistryScope
+  status         EntryStatus
+  currentVersion String
+  sourceType     SourceType
+  sourceRef      String?
+  ownedBy        String
+  createdBy      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  versions       RegistryEntryVersion[]
+
+  @@unique([name, scope])
+  @@index([type, scope, status])
+}
+
+model RegistryEntryVersion {
+  id           String        @id @default(cuid())
+  entryId      String
+  version      String
+  propsSchema  Json
+  defaultProps Json
+  bundleUrl    String?
+  bundleHash   String?
+  viewSchema   Json?
+  displayName  String
+  description  String?
+  category     String
+  icon         String?
+  thumbnail    String?
+  tags         String[]
+  changelog    String?
+  publishedAt  DateTime      @default(now())
+  publishedBy  String
+
+  entry        RegistryEntry @relation(fields: [entryId], references: [id])
+
+  @@unique([entryId, version])
+}
+
+enum ComponentType {
+  PRIMITIVE
+  CUSTOM_WIDGET
+  PREBUILT_VIEW
+}
+
+enum RegistryScope {
+  COMMON
+  TENANT_LOCAL
+}
+
+enum EntryStatus {
+  ACTIVE
+  DEPRECATED
+  PENDING_REVIEW
+  REJECTED
+}
+
+enum SourceType {
+  INTERNAL
+  EXTERNAL_PLATFORM
+  COMPOSED
+}
+
+// ─── Endpoint Registry ────────────────────────────────────────────────────────
+
+model Connector {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  baseUrl     Json
+  authType    ConnectorAuthType
+  authConfig  String
+  headers     Json
+  isActive    Boolean           @default(true)
+  createdBy   String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  endpoints   EndpointDef[]
+  rateLimit   ConnectorRateLimit?
+}
+
+model EndpointDef {
+  id             String      @id @default(cuid())
+  connectorId    String
+  name           String
+  description    String?
+  method         HttpMethod
+  path           String
+  category       String
+  tags           String[]
+  pathParams     Json
+  queryParams    Json
+  bodySchema     Json?
+  headers        Json
+  responseSchema Json
+  responseSample Json?
+  bindingPaths   Json
+  isActive       Boolean     @default(true)
+  createdBy      String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  connector      Connector   @relation(fields: [connectorId], references: [id])
+  cacheConfig    EndpointCacheConfig?
+
+  @@unique([connectorId, method, path])
+}
+
+model ConnectorRateLimit {
+  id                String    @id @default(cuid())
+  connectorId       String    @unique
+  requestsPerMin    Int       @default(60)
+  requestsPerHour   Int       @default(1000)
+  requestsPerDay    Int       @default(10000)
+  burstLimit        Int       @default(10)
+  maxConcurrent     Int       @default(5)
+  maxResponseSizeKb Int       @default(5120)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  connector         Connector @relation(fields: [connectorId], references: [id])
+}
+
+model EndpointCacheConfig {
+  id          String      @id @default(cuid())
+  endpointId  String      @unique
+  ttlSeconds  Int
+  varyBy      String[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  endpoint    EndpointDef @relation(fields: [endpointId], references: [id])
+}
+
+model CustomEndpointUsage {
+  id        String         @id @default(cuid())
+  appId     String
+  pageId    String
+  alias     String
+  mode      DataSourceMode
+  url       String
+  method    HttpMethod
+  usedBy    String
+  createdAt DateTime       @default(now())
+
+  @@index([mode, createdAt])
+}
+
+enum ConnectorAuthType {
+  BEARER
+  API_KEY
+  OAUTH2
+  NONE
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+}
+
+enum DataSourceMode {
+  REGISTERED
+  CUSTOM_CONNECTOR
+  CUSTOM_MANUAL
+}
+
+// ─── Connector Audit ──────────────────────────────────────────────────────────
+
+model ConnectorRequestLog {
+  id              String         @id @default(cuid())
+  correlationId   String?
+  appId           String
+  pageId          String?
+  datasourceAlias String?
+  actionId        String?
+  userId          String
+  mode            DataSourceMode
+  connectorId     String?
+  endpointId      String?
+  method          HttpMethod
+  urlPattern      String
+  statusCode      Int?
+  durationMs      Int
+  cacheHit        Boolean        @default(false)
+  error           String?
+  createdAt       DateTime       @default(now())
+
+  @@index([appId, createdAt])
+  @@index([correlationId])
+  @@index([connectorId, createdAt])
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model BuilderIdentityProvider {
+  id        String   @id @default(cuid())
+  name      String
+  type      IdPType
+  label     String
+  config    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppIdentityProvider {
+  id              String      @id @default(cuid())
+  appId           String
+  environment     Environment
+  type            IdPType
+  label           String
+  configSecretRef String
+  isEnabled       Boolean     @default(true)
+  order           Int
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy       String
+  updatedBy       String
+
+  app             App         @relation(fields: [appId], references: [id])
+
+  @@unique([appId, environment, type])
+}
+
+model RefreshToken {
+  id          String       @id @default(cuid())
+  tokenFamily String
+  tokenHash   String       @unique
+  userId      String
+  appId       String?
+  context     TokenContext
+  environment Environment?
+  isRevoked   Boolean      @default(false)
+  revokedAt   DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+
+  @@index([tokenFamily])
+  @@index([userId, context])
+}
+
+model OAuthState {
+  id           String       @id @default(cuid())
+  state        String       @unique
+  codeVerifier String
+  idpId        String
+  context      TokenContext
+  appId        String?
+  environment  Environment?
+  redirectTo   String
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+}
+
+model SAMLState {
+  id          String       @id @default(cuid())
+  requestId   String       @unique
+  idpId       String
+  context     TokenContext
+  appId       String?
+  environment Environment?
+  redirectTo  String
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+}
+
+enum IdPType {
+  GOOGLE
+  OKTA
+  SAML
+  OIDC
+  AUTH0
+  MAGIC_LINK
+  USERNAME_PASSWORD
+}
+
+enum TokenContext {
+  BUILDER
+  PORTAL
+}
+
+// ─── Assets ───────────────────────────────────────────────────────────────────
+
+model Asset {
+  id         String   @id @default(cuid())
+  appId      String
+  name       String
+  key        String   @unique
+  url        String
+  mimeType   String
+  sizeBytes  Int
+  hash       String
+  width      Int?
+  height     Int?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  app        App      @relation(fields: [appId], references: [id])
+
+  @@index([appId])
+  @@index([hash])
+}
+
+// ─── Action Logs ──────────────────────────────────────────────────────────────
+
+model ActionExecutionLog {
+  id            String       @id @default(cuid())
+  correlationId String?
+  appId         String
+  pageId        String
+  userId        String
+  actionId      String
+  actionName    String
+  actionType    String
+  status        ActionStatus
+  durationMs    Int
+  error         String?
+  metadata      Json?
+  executedAt    DateTime     @default(now())
+
+  @@index([appId, executedAt])
+  @@index([correlationId])
+  @@index([pageId, executedAt])
+}
+
+enum ActionStatus {
+  SUCCESS
+  ERROR
+}
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+
+model NodeComment {
+  id            String    @id @default(cuid())
+  pageId        String
+  nodeId        String
+  pageVersionId String
+  body          String
+  resolved      Boolean   @default(false)
+  resolvedBy    String?
+  resolvedAt    DateTime?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  page          Page      @relation(fields: [pageId], references: [id])
+  replies       NodeCommentReply[]
+}
+
+model NodeCommentReply {
+  id        String      @id @default(cuid())
+  commentId String
+  body      String
+  createdBy String
+  createdAt DateTime    @default(now())
+
+  comment   NodeComment @relation(fields: [commentId], references: [id])
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  pageId    String
+  appId     String
+  event     String
+  userId    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  page      Page     @relation(fields: [pageId], references: [id])
+
+  @@index([pageId, createdAt])
+  @@index([appId, createdAt])
+}

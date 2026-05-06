@@ -1,0 +1,25 @@
+{
+  "name": "portal-builder",
+  "private": true,
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev:backend": "pnpm --filter @portal/backend dev",
+    "dev:builder": "pnpm --filter @portal/builder dev",
+    "dev:renderer": "pnpm --filter @portal/renderer dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:migrate": "pnpm --filter @portal/backend db:migrate",
+    "db:seed": "pnpm --filter @portal/backend db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.14.4"
+}
