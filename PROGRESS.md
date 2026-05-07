@@ -53,10 +53,18 @@
 ## Phase 6 — App Renderer
 - [x] Next.js setup + auth edge middleware + build webhook (Session 6.1)
 - [x] Schema renderer + component resolver + static generation (Session 6.2)
-- [ ] Binding provider + DataSourceResolver
+- [x] Data source resolver + binding context + polling (Session 6.3)
 - [ ] Action execution (action-runtime wired up)
 
 ## Notes
+
+### 2026-05-07 — Session 6.3: Data source resolver + binding context + polling complete
+- src/lib/data/transforms.ts: applyTransform(data, expression) — JSONata evaluate; Sentry captureException on error; rethrows
+- src/lib/data/dataSourceResolver.ts: DataSourceResolver class — resolvedData/loadingState/errorState maps; resolvePageDataSources(sources, urlParams) topological-sorts aliases (visits deps recursively, detects cycles) then resolves in order; resolveSourceByAlias(alias, sources, urlParams) re-resolves single source (used by REFRESH_DATASOURCE action + polling); resolveSource builds partial BindingContext, interpolates url/pathParams/queryParams/body via action-runtime interpolate, honours useMock+mockData shortcut, calls executeConnector (POST /connector/execute with Bearer token + REGISTERED/CUSTOM_CONNECTOR/CUSTOM_MANUAL mode payload), applies JSONata transform if defined, handles errorHandling strategy (show-error/show-empty/use-fallback), calls onUpdate callback per update
+- src/lib/data/pollingManager.ts: PollingManager — start(sources, resolver, urlParams, getContext) sets setInterval per source with polling.intervalMs; each tick resolves pauseWhen expression via resolveBinding (skips if truthy); stop() clears all intervals
+- src/lib/binding/bindingContext.tsx: rewritten with real data fetching; useState for stateSlots (initialised from schema.state defaults), formState, datasource map; useRef for resolver + polling instances; useEffect on [sessionToken, schema.pageId] — creates DataSourceResolver with onUpdate→setDatasource, calls resolvePageDataSources, starts PollingManager, returns cleanup (polling.stop()); contextRef.current tracks latest context for polling closures; exposes resolver ref in context value for useComponentDataSource
+- src/hooks/useComponentDataSource.ts: useComponentDataSource(componentDataSource, pageSources, urlParams) — reads alias from componentDataSource; initial data from context.datasource[alias]; internal page/pageSize/sortField/sortDirection state; fetch() builds pagination+sort queryParams, patches sourceDef, calls resolver.resolveSourceByAlias; useEffect on [page,pageSize,sortField,sortDirection] skips initial mount then refetches; returns {data,loading,error,page,pageSize,total,sortField,sortDirection,setPage,setPageSize,setSort,refetch}
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-07 — Session 6.2: Schema renderer + component resolver + static generation complete
 - src/lib/resolver/componentResolver.tsx: static PRIMITIVES map (34 components from @portal/ui), widgetCache Map for custom widgets; resolveComponent(node) routes by source (primitive/custom_widget/prebuilt_view); preloadCustomWidgets(nodes) flattens tree, dynamically imports custom widget bundles from bundleUrl prop; createPrebuiltViewComponent(node) uses React.lazy + dynamic import of NodeRenderer to avoid circular deps; UnknownComponent fallback renders warning box
