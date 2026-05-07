@@ -252,3 +252,83 @@ export async function getMemberRole(appId: string, userId: string): Promise<stri
   const member = await db.appMember.findUnique({ where: { appId_userId: { appId, userId } } })
   return member?.role ?? null
 }
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+export async function createComment(
+  appId: string,
+  pageId: string,
+  data: { nodeId: string; body: string; createdBy: string }
+) {
+  const page = await db.page.findFirst({ where: { id: pageId, appId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  // Use the current draft version id if available
+  const draft = await db.pageVersion.findFirst({
+    where: { pageId, status: 'DRAFT' },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const comment = await db.nodeComment.create({
+    data: {
+      pageId,
+      nodeId: data.nodeId,
+      pageVersionId: draft?.id ?? '',
+      body: data.body,
+      createdBy: data.createdBy,
+    },
+    include: { replies: true },
+  })
+  return { comment }
+}
+
+export async function listComments(appId: string, pageId: string, nodeId?: string) {
+  const page = await db.page.findFirst({ where: { id: pageId, appId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const where = nodeId ? { pageId, nodeId } : { pageId }
+  const comments = await db.nodeComment.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: { replies: { orderBy: { createdAt: 'asc' } } },
+  })
+  return { comments }
+}
+
+export async function resolveComment(
+  appId: string,
+  pageId: string,
+  commentId: string,
+  resolvedBy: string
+) {
+  const comment = await db.nodeComment.findFirst({ where: { id: commentId, pageId } })
+  if (!comment) throw Object.assign(new Error('Comment not found'), { statusCode: 404 })
+
+  const page = await db.page.findFirst({ where: { id: pageId, appId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const updated = await db.nodeComment.update({
+    where: { id: commentId },
+    data: { resolved: true, resolvedBy, resolvedAt: new Date() },
+    include: { replies: true },
+  })
+  return { comment: updated }
+}
+
+export async function createReply(
+  appId: string,
+  pageId: string,
+  commentId: string,
+  data: { body: string; createdBy: string }
+) {
+  const comment = await db.nodeComment.findFirst({ where: { id: commentId, pageId } })
+  if (!comment) throw Object.assign(new Error('Comment not found'), { statusCode: 404 })
+
+  const page = await db.page.findFirst({ where: { id: pageId, appId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const reply = await db.nodeCommentReply.create({
+    data: { commentId, body: data.body, createdBy: data.createdBy },
+  })
+  return { reply }
+}

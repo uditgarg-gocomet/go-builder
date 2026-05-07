@@ -14,6 +14,10 @@ import {
   updateMemberRole,
   removeMember,
   getDeployment,
+  createComment,
+  listComments,
+  resolveComment,
+  createReply,
 } from './service.js'
 import {
   CreateAppSchema,
@@ -203,4 +207,90 @@ export async function appsRouter(fastify: FastifyInstance): Promise<void> {
       return reply.status(e.statusCode ?? 500).send({ error: e.message })
     }
   })
+
+  // ── POST /apps/:id/pages/:pageId/comments ─────────────────────────────────────
+  fastify.post<{ Params: { id: string; pageId: string } }>(
+    '/:id/pages/:pageId/comments',
+    { preHandler: [requireAuth, requireAppRole('VIEWER')] },
+    async (request, reply) => {
+      const body = request.body as { nodeId?: string; body?: string; createdBy?: string }
+      if (!body.nodeId || !body.body || !body.createdBy) {
+        return reply.status(400).send({ error: 'nodeId, body, and createdBy are required' })
+      }
+      try {
+        const result = await createComment(request.params.id, request.params.pageId, {
+          nodeId: body.nodeId,
+          body: body.body,
+          createdBy: body.createdBy,
+        })
+        return reply.status(201).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── GET /apps/:id/pages/:pageId/comments ──────────────────────────────────────
+  fastify.get<{ Params: { id: string; pageId: string }; Querystring: { nodeId?: string } }>(
+    '/:id/pages/:pageId/comments',
+    { preHandler: [requireAuth, requireAppRole('VIEWER')] },
+    async (request, reply) => {
+      try {
+        const result = await listComments(request.params.id, request.params.pageId, request.query.nodeId)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── PATCH /apps/:id/pages/:pageId/comments/:commentId (resolve) ───────────────
+  fastify.patch<{ Params: { id: string; pageId: string; commentId: string } }>(
+    '/:id/pages/:pageId/comments/:commentId',
+    { preHandler: [requireAuth, requireAppRole('VIEWER')] },
+    async (request, reply) => {
+      const body = request.body as { resolved?: boolean; resolvedBy?: string }
+      if (!body.resolvedBy) {
+        return reply.status(400).send({ error: 'resolvedBy is required' })
+      }
+      try {
+        const result = await resolveComment(
+          request.params.id,
+          request.params.pageId,
+          request.params.commentId,
+          body.resolvedBy
+        )
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── POST /apps/:id/pages/:pageId/comments/:commentId/replies ─────────────────
+  fastify.post<{ Params: { id: string; pageId: string; commentId: string } }>(
+    '/:id/pages/:pageId/comments/:commentId/replies',
+    { preHandler: [requireAuth, requireAppRole('VIEWER')] },
+    async (request, reply) => {
+      const body = request.body as { body?: string; createdBy?: string }
+      if (!body.body || !body.createdBy) {
+        return reply.status(400).send({ error: 'body and createdBy are required' })
+      }
+      try {
+        const result = await createReply(
+          request.params.id,
+          request.params.pageId,
+          request.params.commentId,
+          { body: body.body, createdBy: body.createdBy }
+        )
+        return reply.status(201).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
 }

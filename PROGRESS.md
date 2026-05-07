@@ -39,8 +39,8 @@
 - [x] Props editor + binding input + action bindings (Session 5.4)
 - [x] Page settings — data sources + actions + forms + state (Session 5.5)
 - [x] App settings — theme + IdP + user groups + assets + members (Session 5.6)
-- [ ] Auto-save hook + save status + promote dialog + version history
-- [ ] Data source config UI
+- [x] Auto-save + publish flow + version history + comments (Session 5.7)
+- [ ] Preview + endpoint tester + action debug panel (Session 5.8)
 - [ ] Action config UI
 - [ ] Page management
 - [ ] Publish flow + version history
@@ -62,6 +62,16 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-07 — Session 5.7: Auto-save + publish flow + version history + comments complete
+- useAutoSave hook: watches canvasStore.nodes + childMap, debounces 1.5s, serializes canvas → PageSchema via serializeCanvasToSchema, POST /schema/draft; returns { status: idle|saving|saved|error, warning, lastSavedAt, saveNow }; concurrent edit warning surfaced from backend flag
+- SaveStatusIndicator: pulsing dot for saving, green dot + relative time for saved, amber warning icon for concurrent edit, red for error
+- PromoteDialog: loads version history to find current draft; patch/minor/major bump selector with preview of new version string; staging/production environment selector; required changelog textarea; POST to /schema/:versionId/promote/staging|production; build status polling loop (PENDING → BUILDING → SUCCESS/FAILED)
+- VersionHistoryPanel: GET /schema/:pageId/history; table with v{semver} + status badge (DRAFT/STAGED/PUBLISHED/ARCHIVED/ROLLED_BACK); "View diff" → GET /schema/:pageId/diff?from=&to= shows JSON Patch; "Rollback" (ARCHIVED only) → confirmation dialog → POST /schema/:pageId/rollback
+- CommentBadge: count bubble, click-stops-propagation, hidden when 0
+- CommentPanel: node-scoped comment list; new comment textarea (⌘↵ submit); resolve button per comment; reply thread with inline reply input; full CRUD via backend endpoints
+- Backend comment endpoints added to apps router + service: POST/GET /apps/:id/pages/:pageId/comments, PATCH (resolve), POST replies
+- TypeScript: builder tsc --noEmit passes with 0 errors; no new backend errors introduced
 
 ### 2026-05-06 — Session 5.6: App settings — theme + IdP + user groups + assets + members complete
 - ThemePanel: CSS var color pickers (--brand-primary/secondary/surface/text), Google font selector, border-radius input, live preview swatch, PATCH /api/apps/:id/theme
