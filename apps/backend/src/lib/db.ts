@@ -1,11 +1,13 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { logger } from './logger.js'
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
+type LoggedClient = PrismaClient<Prisma.PrismaClientOptions, 'error' | 'warn'>
 
-export const db: PrismaClient =
+const globalForPrisma = globalThis as unknown as { prisma: LoggedClient | undefined }
+
+export const db: LoggedClient =
   globalForPrisma.prisma ??
-  new PrismaClient({
+  new PrismaClient<Prisma.PrismaClientOptions, 'error' | 'warn'>({
     log: [
       { emit: 'event', level: 'query' },
       { emit: 'event', level: 'error' },

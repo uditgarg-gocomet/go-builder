@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -823,8 +823,8 @@ async function seed() {
       data: {
         entryId: entry.id,
         version: '1.0.0',
-        propsSchema: primitive.propsSchema,
-        defaultProps: primitive.defaultProps,
+        propsSchema: primitive.propsSchema as Prisma.InputJsonValue,
+        defaultProps: primitive.defaultProps as Prisma.InputJsonValue,
         displayName: primitive.displayName,
         description: primitive.description,
         category: primitive.category,

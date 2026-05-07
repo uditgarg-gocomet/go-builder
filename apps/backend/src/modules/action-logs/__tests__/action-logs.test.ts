@@ -207,7 +207,7 @@ describe('GET /action-logs', () => {
   it('filters by status', async () => {
     const result = await query({ appId: 'app-1', status: 'ERROR', limit: 50 })
     expect(result.logs).toHaveLength(1)
-    expect(result.logs[0].status).toBe('ERROR')
+    expect(result.logs[0]!.status).toBe('ERROR')
   })
 
   it('includes correlationId in response', async () => {

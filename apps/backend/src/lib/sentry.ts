@@ -11,9 +11,9 @@ export function initSentry(): void {
   Sentry.init({
     dsn,
     environment: process.env['NODE_ENV'] ?? 'development',
-    release: process.env['npm_package_version'],
+    ...(process.env['npm_package_version'] ? { release: process.env['npm_package_version'] } : {}),
     tracesSampleRate: parseFloat(process.env['SENTRY_TRACES_SAMPLE_RATE'] ?? '0.1'),
-    integrations: [Sentry.httpIntegration({ tracing: true })],
+    integrations: [Sentry.httpIntegration()],
   })
 
   logger.info('Sentry initialised')

@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/node'
+import { Prisma } from '@prisma/client'
 import { db } from '../../lib/db.js'
 import { createChildLogger } from '../../lib/logger.js'
 import type { ActionLogEntry, QueryFilters } from './types.js'
@@ -19,7 +20,7 @@ export function ingest(events: ActionLogEntry[]): void {
       status: e.status,
       durationMs: e.durationMs,
       error: e.error ?? null,
-      metadata: e.metadata ?? undefined,
+      metadata: e.metadata !== undefined ? (e.metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
       executedAt: e.executedAt ? new Date(e.executedAt) : new Date(),
     })),
   }).catch(err => {

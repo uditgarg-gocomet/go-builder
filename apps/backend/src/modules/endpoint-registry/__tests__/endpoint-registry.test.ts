@@ -322,6 +322,10 @@ describe('registerEndpoint', () => {
       method: 'GET',
       path: '/users',
       category: 'Users',
+      tags: [],
+      headers: {},
+      pathParams: [],
+      queryParams: [],
       responseSchema: {
         type: 'object',
         properties: {
@@ -354,6 +358,10 @@ describe('registerEndpoint', () => {
       method: 'GET',
       path: '/test',
       category: 'Test',
+      tags: [],
+      headers: {},
+      pathParams: [],
+      queryParams: [],
       responseSchema: { type: 'object' },
       createdBy: 'fde-1',
     })).rejects.toMatchObject({ statusCode: 404 })

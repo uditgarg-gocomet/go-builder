@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // ── ComponentNode (recursive) ─────────────────────────────────────────────────
 
-export const ComponentNodeZ: z.ZodType<ComponentNode> = z.lazy(() =>
+export const ComponentNodeZ = (z.lazy(() =>
   z.object({
     id: z.string(),
     type: z.string(),
@@ -26,7 +26,7 @@ export const ComponentNodeZ: z.ZodType<ComponentNode> = z.lazy(() =>
       sorting: z.object({ enabled: z.boolean(), fieldParam: z.string().optional() }).optional(),
     }).optional(),
   })
-)
+)) as unknown as z.ZodType<ComponentNode>
 
 export interface ComponentNode {
   id: string
@@ -34,7 +34,7 @@ export interface ComponentNode {
   source: 'primitive' | 'custom_widget' | 'prebuilt_view'
   props: Record<string, unknown>
   bindings: Record<string, string>
-  actions: Array<{ trigger: string; actionId: string; params?: Record<string, unknown> }>
+  actions: Array<{ trigger: string; actionId: string; params?: Record<string, unknown> | undefined }>
   style: Record<string, unknown>
   responsive: { tablet?: Record<string, unknown>; mobile?: Record<string, unknown> }
   children: ComponentNode[]

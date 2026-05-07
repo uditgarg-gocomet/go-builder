@@ -17,6 +17,10 @@ export interface ConnectorExecuteParams extends ExecuteParams {
   invalidateEndpoints?: string[]
 }
 
+function optionals(obj: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Record<string, string>
+}
+
 export async function execute(params: ConnectorExecuteParams): Promise<ExecuteResult> {
   const { appId, userId, correlationId, invalidateEndpoints } = params
 
@@ -27,19 +31,15 @@ export async function execute(params: ConnectorExecuteParams): Promise<ExecuteRe
   const withinRateLimit = await checkRateLimit(connectorId, appId)
   if (!withinRateLimit) {
     auditLog({
-      correlationId,
       appId,
-      pageId: params.pageId,
-      datasourceAlias: params.datasourceAlias,
       userId,
       mode: params.mode,
-      connectorId: params.connectorId,
-      endpointId: params.endpointId,
       method: params.method ?? 'GET',
       urlPattern: params.url ?? params.endpointId ?? '',
       durationMs: 0,
       cacheHit: false,
       error: 'Rate limit exceeded',
+      ...optionals({ correlationId, pageId: params.pageId, datasourceAlias: params.datasourceAlias, connectorId: params.connectorId, endpointId: params.endpointId }),
     })
     throw Object.assign(new Error('Rate limit exceeded'), { statusCode: 429 })
   }
@@ -48,10 +48,10 @@ export async function execute(params: ConnectorExecuteParams): Promise<ExecuteRe
   const acquired = await acquireConcurrencySlot(connectorId, appId)
   if (!acquired) {
     auditLog({
-      correlationId, appId, pageId: params.pageId, datasourceAlias: params.datasourceAlias,
-      userId, mode: params.mode, connectorId: params.connectorId, endpointId: params.endpointId,
+      appId, userId, mode: params.mode,
       method: params.method ?? 'GET', urlPattern: params.url ?? params.endpointId ?? '',
       durationMs: 0, cacheHit: false, error: 'Concurrency limit exceeded',
+      ...optionals({ correlationId, pageId: params.pageId, datasourceAlias: params.datasourceAlias, connectorId: params.connectorId, endpointId: params.endpointId }),
     })
     throw Object.assign(new Error('Concurrency limit exceeded'), { statusCode: 429 })
   }
@@ -61,15 +61,15 @@ export async function execute(params: ConnectorExecuteParams): Promise<ExecuteRe
     const cacheParams = {
       mode: params.mode,
       method: params.method ?? 'GET',
-      endpointId: params.endpointId,
+      ...(params.endpointId !== undefined ? { endpointId: params.endpointId } : {}),
     }
     const cached = await getCached(cacheParams, params.queryParams ?? {})
     if (cached !== null) {
       auditLog({
-        correlationId, appId, pageId: params.pageId, datasourceAlias: params.datasourceAlias,
-        userId, mode: params.mode, connectorId: params.connectorId, endpointId: params.endpointId,
+        appId, userId, mode: params.mode,
         method: params.method ?? 'GET', urlPattern: params.url ?? params.endpointId ?? '',
         durationMs: 0, cacheHit: true,
+        ...optionals({ correlationId, pageId: params.pageId, datasourceAlias: params.datasourceAlias, connectorId: params.connectorId, endpointId: params.endpointId }),
       })
       return cached as ExecuteResult
     }
@@ -91,11 +91,10 @@ export async function execute(params: ConnectorExecuteParams): Promise<ExecuteRe
 
     // Audit log
     auditLog({
-      correlationId, appId, pageId: params.pageId, datasourceAlias: params.datasourceAlias,
-      actionId: params.actionId, userId, mode: params.mode,
-      connectorId: result.connectorId, endpointId: result.endpointId,
+      appId, userId, mode: params.mode,
       method: result.method, urlPattern: result.urlPattern,
       statusCode: result.statusCode, durationMs: result.durationMs, cacheHit: false,
+      ...optionals({ correlationId, pageId: params.pageId, datasourceAlias: params.datasourceAlias, actionId: params.actionId, connectorId: result.connectorId, endpointId: result.endpointId }),
     })
 
     return result

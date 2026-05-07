@@ -362,7 +362,7 @@ describe('triggerBuild (webhook signature)', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce()
 
-    const [, options] = fetchMock.mock.calls[0] as [string, { headers: Record<string, string>; body: string }]
+    const [, options] = fetchMock.mock.calls[0] as unknown as [string, { headers: Record<string, string>; body: string }]
     const signature = options.headers['x-build-signature']
     const body = options.body
 
@@ -374,7 +374,7 @@ describe('triggerBuild (webhook signature)', () => {
   it('includes deploymentId, pageVersionId, and environment in payload', async () => {
     await triggerBuild('pv-42', 'PRODUCTION', 'dep-99')
 
-    const [, options] = fetchMock.mock.calls[0] as [string, { body: string }]
+    const [, options] = fetchMock.mock.calls[0] as unknown as [string, { body: string }]
     const payload = JSON.parse(options.body)
 
     expect(payload).toEqual({

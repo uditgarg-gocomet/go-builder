@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { db } from '../../lib/db.js'
 import { createChildLogger } from '../../lib/logger.js'
 import type { RegisterCustomWidgetRequest, SavePrebuiltViewRequest, DeprecateEntryRequest } from './types.js'
@@ -123,8 +124,8 @@ export async function registerCustomWidget(request: RegisterCustomWidgetRequest)
     data: {
       entryId: entry.id,
       version,
-      propsSchema,
-      defaultProps,
+      propsSchema: propsSchema as Prisma.InputJsonValue,
+      defaultProps: defaultProps as Prisma.InputJsonValue,
       bundleUrl,
       bundleHash: bundleHash ?? null,
       displayName,
@@ -184,9 +185,9 @@ export async function savePrebuiltView(request: SavePrebuiltViewRequest) {
     data: {
       entryId: entry.id,
       version: nextVersion,
-      propsSchema,
-      defaultProps,
-      viewSchema,
+      propsSchema: propsSchema as Prisma.InputJsonValue,
+      defaultProps: defaultProps as Prisma.InputJsonValue,
+      viewSchema: viewSchema as Prisma.InputJsonValue,
       displayName,
       description: description ?? null,
       category,

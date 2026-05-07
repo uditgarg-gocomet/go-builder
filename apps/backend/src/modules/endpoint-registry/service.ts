@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { db } from '../../lib/db.js'
 import { secretsProvider } from '../../lib/secrets.js'
 import { createChildLogger } from '../../lib/logger.js'
@@ -127,13 +128,13 @@ export async function registerEndpoint(request: RegisterEndpointRequest) {
       path,
       category,
       tags,
-      pathParams: pathParams as object,
-      queryParams: queryParams as object,
-      bodySchema: bodySchema ?? null,
-      headers: headers as object,
-      responseSchema: responseSchema as object,
-      responseSample: responseSample ?? null,
-      bindingPaths: bindingPaths as unknown as object,
+      pathParams: pathParams as Prisma.InputJsonValue,
+      queryParams: queryParams as Prisma.InputJsonValue,
+      bodySchema: bodySchema !== undefined ? (bodySchema as Prisma.InputJsonValue) : Prisma.JsonNull,
+      headers: headers as Prisma.InputJsonValue,
+      responseSchema: responseSchema as Prisma.InputJsonValue,
+      responseSample: responseSample !== undefined ? (responseSample as Prisma.InputJsonValue) : Prisma.JsonNull,
+      bindingPaths: bindingPaths as unknown as Prisma.InputJsonValue,
       createdBy,
     },
   })
@@ -290,11 +291,11 @@ export async function testEndpoint(request: TestEndpointRequest): Promise<{
       const res = await fetch(targetUrl, {
         method: resolvedMethod,
         headers: resolvedHeaders,
-        body: requestBody,
+        body: requestBody ?? null,
         signal: abortController.signal,
       })
 
-      statusCode = res.statusCode ?? res.status
+      statusCode = res.status
       try {
         response = await (res as Response).json()
       } catch {

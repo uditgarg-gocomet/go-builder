@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { authService } from '../auth/service.js'
-import { execute } from './service.js'
+import { execute, type ConnectorExecuteParams } from './service.js'
 
 const ExecuteRequestSchema = z.object({
   mode: z.enum(['REGISTERED', 'CUSTOM_CONNECTOR', 'CUSTOM_MANUAL']),
@@ -45,11 +45,11 @@ export async function connectorRouter(fastify: FastifyInstance): Promise<void> {
     const correlationId = (request as { correlationId?: string }).correlationId
 
     try {
-      const result = await execute({
-        ...body.data,
-        userId,
-        correlationId,
-      })
+      const executeParams = Object.fromEntries(
+        Object.entries({ ...body.data, userId, ...(correlationId !== undefined ? { correlationId } : {}) })
+          .filter(([, v]) => v !== undefined)
+      ) as unknown as ConnectorExecuteParams
+      const result = await execute(executeParams)
       return reply.status(200).send(result)
     } catch (err: unknown) {
       const e = err as { message?: string; statusCode?: number }

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import * as jsonpatch from 'fast-json-patch'
 import semver from 'semver'
+import { Prisma } from '@prisma/client'
 import { db } from '../../lib/db.js'
 import { createChildLogger } from '../../lib/logger.js'
 import type { SaveDraftRequest, PromoteRequest, RollbackRequest, ComponentNode } from './types.js'
@@ -106,7 +107,7 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
       version: currentVersionStr,
       schema: schema as unknown as object,
       status: 'DRAFT',
-      diffFromPrev: diffFromPrev ?? undefined,
+      diffFromPrev: diffFromPrev !== undefined ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
       createdBy: savedBy,
     },
   })

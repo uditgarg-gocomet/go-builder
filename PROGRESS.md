@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 6 IN PROGRESS
+## Status: POC COMPLETE — v0.1.0
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -55,8 +55,34 @@
 - [x] Schema renderer + component resolver + static generation (Session 6.2)
 - [x] Data source resolver + binding context + polling (Session 6.3)
 - [x] Action execution + auth context + form manager integration (Session 6.4)
+- [x] End-to-end typecheck + production Docker build (Session 6.5)
 
 ## Notes
+
+### 2026-05-07 — Session 6.5: End-to-end typecheck + production Docker build complete
+- Fixed all backend TypeScript errors (30+) caused by exactOptionalPropertyTypes: true:
+  - db.ts: typed PrismaClient with Prisma.PrismaClientOptions/'error'|'warn' generics for $on
+  - redis.ts: use named { Redis } export from ioredis v5 (no default export in strict mode)
+  - sentry.ts: conditional spread for optional release; removed deprecated tracing option from httpIntegration
+  - action-logs/service.ts: metadata cast to Prisma.InputJsonValue | Prisma.JsonNull
+  - assets/router.ts: typed request.file() via cast; build listAssets opts conditionally to avoid undefined spread
+  - connector/executor.ts: body ?? null for fetch RequestInit; conditional spread for optional meta fields
+  - connector/router.ts: strip undefined from body.data before passing to execute()
+  - connector/service.ts: optionals() helper strips undefined for auditLog calls; endpointId conditional in cacheParams
+  - endpoint-registry/service.ts: Prisma.JsonNull for nullable JSON fields; body ?? null; res.status not res.statusCode
+  - endpoint-registry/tests: add required tags/headers/pathParams/queryParams fields to registerEndpoint calls
+  - registry/seed.ts + service.ts: cast propsSchema/defaultProps/viewSchema to Prisma.InputJsonValue
+  - schema/service.ts: diffFromPrev ?? Prisma.JsonNull for nullable JSON
+  - schema/tests: use as unknown as for mock.calls type assertions
+  - schema/types.ts: use (z.lazy(...)) as unknown as z.ZodType<ComponentNode> to bypass exactOptionalPropertyTypes mismatch on responsive.tablet
+- apps/backend/Dockerfile: multi-stage (base→deps→builder→runner); node:20-alpine; dumb-init; non-root portal user; EXPOSE 3001
+- apps/builder/Dockerfile: multi-stage Next.js standalone; non-root portal user; EXPOSE 3000
+- apps/renderer/Dockerfile: multi-stage Next.js standalone; non-root portal user; EXPOSE 3002
+- docker-compose.prod.yml: all 7 services (postgres, redis, openfga, backend, builder, renderer, nginx) with healthchecks and proper depends_on
+- nginx.conf: builder.localhost→builder:3000, api.localhost→backend:3001, app.localhost→renderer:3002
+- scripts/health-check.sh: curl /health on all three services; reports pass/fail; exits 1 on any failure
+- README.md: prerequisites, quick start, dev workflow, tests, production build, env var table, architecture diagram
+- All three apps: tsc --noEmit passes with 0 errors (builder, renderer, backend)
 
 ### 2026-05-07 — Session 6.4: Action execution + auth context + form manager integration complete
 - src/lib/auth/authContext.tsx: AuthProvider client component; decodeJwtPayload() does base64url decode of JWT payload (no signature verification — middleware already verified); reads portal_session cookie via document.cookie on mount; provides { sessionToken, user: {id, email, groups}, refresh(), logout() }; refresh() calls /api/auth/refresh + re-reads cookie; logout() calls /api/auth/logout + clears state; accepts initialToken/initialUserId server props for hydration

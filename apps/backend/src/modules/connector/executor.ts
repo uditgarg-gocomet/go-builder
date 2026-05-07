@@ -125,7 +125,9 @@ export async function executeRequest(params: ExecuteParams): Promise<ExecuteResu
   }
 
   return fetchWithLimits(targetUrl, resolvedMethod, resolvedHeaders, requestBody, {
-    urlPattern, connectorId, endpointId,
+    urlPattern,
+    ...(connectorId !== undefined ? { connectorId } : {}),
+    ...(endpointId !== undefined ? { endpointId } : {}),
   })
 }
 
@@ -169,7 +171,7 @@ async function fetchWithLimits(
     const res = await fetch(url, {
       method,
       headers,
-      body,
+      body: body ?? null,
       signal: abortController.signal,
     })
 

@@ -17,7 +17,7 @@ export async function assetsRouter(fastify: FastifyInstance): Promise<void> {
     if (!session) return reply.status(401).send({ error: 'Unauthorized' })
 
     try {
-      const data = await request.file()
+      const data = await (request as unknown as { file(): Promise<{ toBuffer(): Promise<Buffer>; mimetype: string; filename: string } | null> }).file()
       if (!data) {
         return reply.status(400).send({ error: 'No file provided' })
       }
@@ -50,7 +50,10 @@ export async function assetsRouter(fastify: FastifyInstance): Promise<void> {
     }
 
     try {
-      const assets = await listAssets(appId, { mimeType, search })
+      const listOpts: { mimeType?: string; search?: string } = {}
+      if (mimeType !== undefined) listOpts.mimeType = mimeType
+      if (search !== undefined) listOpts.search = search
+      const assets = await listAssets(appId, listOpts)
       return reply.status(200).send({ assets })
     } catch (err: unknown) {
       const e = err as { message?: string; statusCode?: number }
