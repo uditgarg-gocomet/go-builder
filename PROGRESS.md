@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 5 COMPLETE — PHASE 6 NEXT
+## Status: PHASE 6 IN PROGRESS
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -51,17 +51,31 @@
 - [ ] Endpoint tester
 
 ## Phase 6 — App Renderer
-- [ ] Next.js setup + auth edge middleware
-- [ ] Build webhook receiver
+- [x] Next.js setup + auth edge middleware + build webhook (Session 6.1)
 - [ ] Schema renderer — recursive component tree
 - [ ] Component resolver
 - [ ] Binding provider + DataSourceResolver
 - [ ] Action execution (action-runtime wired up)
 - [ ] Theme injection
-- [ ] Portal login page + auth callbacks
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-07 — Session 6.1: Renderer setup + auth edge middleware + build webhook complete
+- next.config.ts: transpilePackages for @portal/ui/core/action-runtime
+- tailwind.config.ts + postcss.config.js: CSS variable color tokens, content paths include packages/ui
+- Added dependencies: ioredis, jose, @openfga/sdk to @portal/renderer
+- middleware.ts: PUBLIC_PATHS=[/login, /unauthorized, /api/auth, /api/build]; extracts appSlug from first path segment; reads portal_session cookie; verifies JWT signature via createRemoteJWKSet (jose, edge-safe); POST /auth/validate on Core Backend (includes Redis revocation check); OpenFGA page:appSlug/pageSlug viewer check (fail-closed on errors); injects x-portal-user-id, x-portal-app-id, x-portal-token headers
+- src/app/[appSlug]/login/page.tsx: server component; fetches GET /auth/portal/idps?appSlug=&env= from Core Backend; renders login buttons for each IdP; links to /auth/init/:idpId?context=PORTAL with redirectTo
+- src/app/[appSlug]/unauthorized/page.tsx: access denied page with link back to home and re-login
+- src/app/api/auth/callback/[idpId]/route.ts: GET handler; reads ?token from search params; sets portal_session cookie (HttpOnly, Secure, SameSite=strict, 8h); redirects to redirectTo param
+- src/app/api/auth/refresh/route.ts: POST; reads portal_refresh_token cookie; POST /auth/refresh on Core Backend; updates portal_session + portal_refresh_token cookies; 401 on failure with cookie cleanup
+- src/app/api/auth/logout/route.ts: POST; POST /auth/logout on Core Backend (best-effort); deletes portal_session + portal_refresh_token cookies; redirects to /{appSlug}/login
+- src/app/api/build/webhook/route.ts: POST; HMAC-SHA256 signature verification against BUILD_WEBHOOK_SECRET; parses { deploymentId, appSlug, environment }; returns { received: true } immediately; async revalidatePath trigger via /api/build/revalidate
+- src/app/api/build/revalidate/route.ts: GET; x-revalidate-token header check; revalidatePath(/{appSlug}, 'layout')
+- src/app/[appSlug]/[pageSlug]/page.tsx: placeholder with generateStaticParams stub (returns [] for now)
+- src/lib/apiClient.ts: server-side typed API client for backend calls
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-07 — Session 5.8: Preview + endpoint tester + action debug panel complete
 - src/lib/redis.ts: ioredis singleton with lazy connect + 1h TTL constant for builder API routes
