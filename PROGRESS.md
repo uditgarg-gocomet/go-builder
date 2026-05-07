@@ -1,6 +1,6 @@
 # Build Progress
 
-## Status: PHASE 4 IN PROGRESS
+## Status: PHASE 5 COMPLETE — PHASE 6 NEXT
 
 ## Phase 1 — Foundation
 - [x] Monorepo skeleton — pnpm workspaces, tsconfig, package.json files
@@ -40,7 +40,7 @@
 - [x] Page settings — data sources + actions + forms + state (Session 5.5)
 - [x] App settings — theme + IdP + user groups + assets + members (Session 5.6)
 - [x] Auto-save + publish flow + version history + comments (Session 5.7)
-- [ ] Preview + endpoint tester + action debug panel (Session 5.8)
+- [x] Preview + endpoint tester + action debug panel (Session 5.8)
 - [ ] Action config UI
 - [ ] Page management
 - [ ] Publish flow + version history
@@ -62,6 +62,20 @@
 - [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-07 — Session 5.8: Preview + endpoint tester + action debug panel complete
+- src/lib/redis.ts: ioredis singleton with lazy connect + 1h TTL constant for builder API routes
+- POST /api/preview/create: stores PreviewSession (token, appId, pageId, ownerId, schema, mockData, isShared, restrictTo) in Redis with EX 3600; supports existingToken to update in place with ownership check
+- GET /api/preview/[token]: validates owner/shared access, refreshes TTL, returns PreviewSession
+- POST /api/preview/share: sets isShared=true + optional restrictTo, returns shareUrl
+- app/preview/[token]/page.tsx: server component; fetches session server-side; mounts PreviewShell + PreviewRenderer; redirects to /login if unauthenticated
+- PreviewShell: PREVIEW badge, breakpoint switcher (desktop/tablet/mobile) fires custom window event, share button → POST /api/preview/share + copy link, open-in-new-tab
+- PreviewRenderer: PreviewBindingContext (resolveBinding walks dot-paths through mockData), PreviewActionContext (interceptedActions), minimal PreviewNode tree renderer (stack/card/button/text/input/image + fallback), PreviewActionLogPanel (collapsible, shows intercepted fire events), 2s polling for schema updates
+- useLivePreviewSync: debounce 1.5s on canvas nodes+childMap, serializes schema, POSTs to /api/preview/create; returns { previewToken, previewUrl }
+- MockDataEditor: per-alias toggle (Use mock/Use real), JSON textarea with parse validation, "Import from last test" button; calls onMockDataChange callback
+- EndpointTester: connector selector → endpoint browser OR custom URL + method; path/query param JSON inputs; body editor for POST/PUT/PATCH; POST /endpoints/test; response viewer (status + durationMs + JSON); "Use as mock data for [alias]" button
+- ActionDebugPanel: polls GET /action-logs?appId=&pageId=&limit=20 every 3s; log table (timestamp | name | type | status badge | duration); expand row → correlationId + error + metadata JSON
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-07 — Session 5.7: Auto-save + publish flow + version history + comments complete
 - useAutoSave hook: watches canvasStore.nodes + childMap, debounces 1.5s, serializes canvas → PageSchema via serializeCanvasToSchema, POST /schema/draft; returns { status: idle|saving|saved|error, warning, lastSavedAt, saveNow }; concurrent edit warning surfaced from backend flag
