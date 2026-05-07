@@ -29,7 +29,7 @@ export const accordionManifest = {
   tags: ['layout', 'accordion', 'collapse', 'expand'],
 }
 
-export function Accordion({ type = 'single', collapsible = true, items, className, style }: AccordionProps): React.ReactElement {
+export function Accordion({ type = 'single', collapsible = true, items = [], className, style }: AccordionProps): React.ReactElement {
   const sharedProps = { className: cn('w-full divide-y divide-border border rounded-md', className), style }
 
   if (type === 'multiple') {

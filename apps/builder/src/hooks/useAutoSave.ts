@@ -5,10 +5,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { usePageStore } from '@/stores/pageStore'
 import { useAppStore } from '@/stores/appStore'
 import { serializeCanvasToSchema } from '@/lib/schema/serialize'
-
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 const DEBOUNCE_MS = 1500
 
@@ -67,25 +64,18 @@ export function useAutoSave(userId: string): AutoSaveResult {
         stateSlots,
       })
 
-      const res = await fetch(`${BACKEND_URL}/schema/draft`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ pageId: activePageId, schema, savedBy: userId }),
-      })
-
-      if (res.ok) {
-        const data = (await res.json()) as { concurrentEditWarning?: boolean }
-        setStatus('saved')
-        setLastSavedAt(new Date())
-        if (data.concurrentEditWarning) {
-          setWarning('Another editor saved changes while you were editing.')
-        }
-      } else {
-        setStatus('error')
+      const data = await clientFetch<{ concurrentEditWarning?: boolean }>(
+        '/schema/draft',
+        { method: 'POST', body: JSON.stringify({ pageId: activePageId, schema, savedBy: userId }) },
+      )
+      setStatus('saved')
+      setLastSavedAt(new Date())
+      if (data.concurrentEditWarning) {
+        setWarning('Another editor saved changes while you were editing.')
       }
     } catch {
       setStatus('error')
+      setWarning(undefined)
     } finally {
       savingRef.current = false
     }

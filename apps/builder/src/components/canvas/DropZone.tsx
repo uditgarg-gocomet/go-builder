@@ -7,10 +7,11 @@ interface DropZoneProps {
   id: string
   label?: string
   className?: string
+  data?: Record<string, unknown>
 }
 
-export function DropZone({ id, label = 'Drop components here', className }: DropZoneProps): React.ReactElement {
-  const { isOver, setNodeRef } = useDroppable({ id })
+export function DropZone({ id, label = 'Drop components here', className, data }: DropZoneProps): React.ReactElement {
+  const { isOver, setNodeRef } = useDroppable({ id, data })
 
   return (
     <div

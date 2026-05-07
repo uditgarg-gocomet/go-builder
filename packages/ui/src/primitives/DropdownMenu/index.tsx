@@ -37,7 +37,7 @@ export const dropdownMenuManifest = {
   tags: ['dropdown', 'menu', 'action', 'select'],
 }
 
-export function DropdownMenu({ triggerLabel = 'Options', items, trigger, className, style }: DropdownMenuProps): React.ReactElement {
+export function DropdownMenu({ triggerLabel = 'Options', items = [], trigger, className, style }: DropdownMenuProps): React.ReactElement {
   return (
     <RadixDropdown.Root>
       <RadixDropdown.Trigger asChild>

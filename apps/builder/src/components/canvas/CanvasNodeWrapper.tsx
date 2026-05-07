@@ -36,8 +36,6 @@ export function CanvasNodeWrapper({ nodeId, children }: CanvasNodeWrapperProps):
   return (
     <div
       ref={setRef}
-      {...attributes}
-      {...listeners}
       onClick={(e) => { e.stopPropagation(); selectNode(nodeId) }}
       onMouseEnter={(e) => { e.stopPropagation(); setHoveredNode(nodeId) }}
       onMouseLeave={() => setHoveredNode(null)}
@@ -49,6 +47,17 @@ export function CanvasNodeWrapper({ nodeId, children }: CanvasNodeWrapperProps):
         isDragging ? 'opacity-40' : '',
       ].filter(Boolean).join(' ')}
     >
+      {/* Drag handle — shown on hover/select, doesn't block inner interactions */}
+      {(isSelected || isHovered) && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -top-3 left-1/2 -translate-x-1/2 z-50 flex h-5 cursor-grab items-center gap-0.5 rounded bg-blue-500 px-1.5 text-[10px] font-medium text-white shadow active:cursor-grabbing"
+          onClick={e => e.stopPropagation()}
+        >
+          ⠿ {nodeId.slice(0, 4)}
+        </div>
+      )}
       {children}
     </div>
   )

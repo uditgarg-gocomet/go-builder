@@ -59,6 +59,17 @@
 
 ## Notes
 
+### 2026-05-07 — Builder dev login + editor route complete
+- Added dev-login endpoint to auth router (guarded by NODE_ENV !== 'production'): mints RS256 JWT directly, returns { token, userId, email }
+- apps/builder/src/app/login/DevLoginForm.tsx: client component; POSTs to /auth/dev-login, then POSTs token to /api/auth/session, redirects to /apps
+- apps/builder/src/app/login/page.tsx: updated to show DevLoginForm in dev mode with divider when IdPs also present
+- apps/builder/src/app/apps/new/page.tsx: create-app form with name + auto-slugified URL slug; POST /apps; redirect to /apps/:id
+- apps/builder/src/app/apps/[id]/page.tsx: SSR; reads session cookie, fetches app + pages from backend, renders EditorShell; 401→/login, 404→notFound
+- Fixed page.tsx fetchApp: backend /apps/:id returns app directly (not wrapped in { app }); was causing 404 on editor route
+- apps/builder/src/app/apps/[id]/EditorShell.tsx: full editor — header (back link, app name, page tabs, + Page, Settings/History/Publish), ComponentPanel, BuilderCanvas, PropsEditor/SettingsSidebar/VersionHistoryPanel, PromoteDialog, AppSettingsModal; hooks: useAutoSave + useKeyboardShortcuts
+- Verified end-to-end: dev login → /apps list → create app → editor renders with "Test Portal" name + all panels
+- tsc --noEmit: 0 errors on builder
+
 ### 2026-05-07 — Session 6.5: End-to-end typecheck + production Docker build complete
 - Fixed all backend TypeScript errors (30+) caused by exactOptionalPropertyTypes: true:
   - db.ts: typed PrismaClient with Prisma.PrismaClientOptions/'error'|'warn' generics for $on

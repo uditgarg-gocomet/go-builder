@@ -81,10 +81,17 @@ export const useCanvasStore = create<CanvasStore>()(
         }
         set(produce<CanvasStore>(state => {
           state.nodes[id] = node
-          if (!state.childMap[parentId]) state.childMap[parentId] = []
-          state.childMap[parentId]!.splice(position, 0, id)
-          state.parentMap[id] = parentId
           if (!state.childMap[id]) state.childMap[id] = []
+
+          if (!state.rootId) {
+            // Empty canvas: first dropped node becomes the root
+            state.rootId = id
+          } else {
+            const effectiveParent = parentId || state.rootId
+            if (!state.childMap[effectiveParent]) state.childMap[effectiveParent] = []
+            state.childMap[effectiveParent]!.splice(position, 0, id)
+            state.parentMap[id] = effectiveParent
+          }
         }))
         return id
       },

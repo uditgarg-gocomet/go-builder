@@ -4,9 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePageStore } from '@/stores/pageStore'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 interface CommentReply {
   id: string
@@ -45,14 +43,10 @@ export function CommentPanel({ appId, userId }: CommentPanelProps): React.ReactE
     if (!activePageId || !selectedNodeId) return
     setLoading(true)
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/apps/${appId}/pages/${activePageId}/comments?nodeId=${selectedNodeId}`,
-        { credentials: 'include' }
+      const data = await clientFetch<{ comments: Comment[] }>(
+        `/apps/${appId}/pages/${activePageId}/comments?nodeId=${selectedNodeId}`
       )
-      if (res.ok) {
-        const data = (await res.json()) as { comments: Comment[] }
-        setComments(data.comments ?? [])
-      }
+      setComments(data.comments ?? [])
     } finally {
       setLoading(false)
     }
@@ -64,17 +58,12 @@ export function CommentPanel({ appId, userId }: CommentPanelProps): React.ReactE
     if (!newBody.trim() || !activePageId || !selectedNodeId) return
     setSubmitting(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/apps/${appId}/pages/${activePageId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ nodeId: selectedNodeId, body: newBody.trim(), createdBy: userId }),
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { comment: Comment }
-        setComments(cs => [data.comment, ...cs])
-        setNewBody('')
-      }
+      const data = await clientFetch<{ comment: Comment }>(
+        `/apps/${appId}/pages/${activePageId}/comments`,
+        { method: 'POST', body: JSON.stringify({ nodeId: selectedNodeId, body: newBody.trim(), createdBy: userId }) }
+      )
+      setComments(cs => [data.comment, ...cs])
+      setNewBody('')
     } finally {
       setSubmitting(false)
     }
@@ -82,40 +71,28 @@ export function CommentPanel({ appId, userId }: CommentPanelProps): React.ReactE
 
   const handleResolve = async (commentId: string): Promise<void> => {
     if (!activePageId) return
-    const res = await fetch(
-      `${BACKEND_URL}/apps/${appId}/pages/${activePageId}/comments/${commentId}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ resolved: true, resolvedBy: userId }),
-      }
-    )
-    if (res.ok) {
+    try {
+      await clientFetch(`/apps/${appId}/pages/${activePageId}/comments/${commentId}`, {
+        method: 'PATCH', body: JSON.stringify({ resolved: true, resolvedBy: userId }),
+      })
       setComments(cs => cs.map(c => c.id === commentId ? { ...c, resolved: true } : c))
-    }
+    } catch { /* non-critical */ }
   }
 
   const handleReply = async (commentId: string): Promise<void> => {
     const body = replyBody[commentId]?.trim()
     if (!body || !activePageId) return
-    const res = await fetch(
-      `${BACKEND_URL}/apps/${appId}/pages/${activePageId}/comments/${commentId}/replies`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ body, createdBy: userId }),
-      }
-    )
-    if (res.ok) {
-      const data = (await res.json()) as { reply: CommentReply }
+    try {
+      const data = await clientFetch<{ reply: CommentReply }>(
+        `/apps/${appId}/pages/${activePageId}/comments/${commentId}/replies`,
+        { method: 'POST', body: JSON.stringify({ body, createdBy: userId }) }
+      )
       setComments(cs => cs.map(c =>
         c.id === commentId ? { ...c, replies: [...c.replies, data.reply] } : c
       ))
       setReplyBody(rb => ({ ...rb, [commentId]: '' }))
       setReplyingTo(null)
-    }
+    } catch { /* non-critical */ }
   }
 
   if (!selectedNodeId) {

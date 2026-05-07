@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 const POLL_INTERVAL_MS = 3000
 
@@ -35,11 +33,10 @@ export function ActionDebugPanel({ appId, pageId }: ActionDebugPanelProps): Reac
     const params = new URLSearchParams({ appId, limit: '20' })
     if (pageId) params.set('pageId', pageId)
 
-    const res = await fetch(`${BACKEND_URL}/action-logs?${params}`, { credentials: 'include' })
-    if (res.ok) {
-      const data = (await res.json()) as { logs: ActionLogEntry[] }
+    try {
+      const data = await clientFetch<{ logs: ActionLogEntry[] }>(`/action-logs?${params}`)
       setLogs(data.logs ?? [])
-    }
+    } catch { /* non-critical polling */ }
   }, [appId, pageId])
 
   // Initial load

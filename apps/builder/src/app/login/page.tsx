@@ -1,4 +1,5 @@
 import React from 'react'
+import { DevLoginForm } from './DevLoginForm'
 
 const BACKEND_URL = process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001'
 
@@ -21,6 +22,8 @@ async function fetchBuilderIdPs(): Promise<IdP[]> {
   }
 }
 
+const IS_DEV = process.env['NODE_ENV'] !== 'production'
+
 export default async function LoginPage(): Promise<React.ReactElement> {
   const idps = await fetchBuilderIdPs()
 
@@ -33,20 +36,33 @@ export default async function LoginPage(): Promise<React.ReactElement> {
         </div>
 
         <div className="space-y-3">
-          {idps.length === 0 ? (
+          {idps.map(idp => (
+            <a
+              key={idp.id}
+              href={`${BACKEND_URL}/auth/init/${idp.id}?context=BUILDER`}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              Sign in with {idp.displayName}
+            </a>
+          ))}
+
+          {IS_DEV && (
+            <>
+              {idps.length > 0 && (
+                <div className="relative flex items-center">
+                  <div className="flex-1 border-t border-border" />
+                  <span className="mx-3 text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 border-t border-border" />
+                </div>
+              )}
+              <DevLoginForm />
+            </>
+          )}
+
+          {idps.length === 0 && !IS_DEV && (
             <p className="text-center text-sm text-muted-foreground">
               No identity providers configured. Contact your administrator.
             </p>
-          ) : (
-            idps.map(idp => (
-              <a
-                key={idp.id}
-                href={`${BACKEND_URL}/auth/init/${idp.id}?context=BUILDER`}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                Sign in with {idp.displayName}
-              </a>
-            ))
           )}
         </div>
       </div>

@@ -8,9 +8,7 @@ import { AssetPanel } from './AssetPanel'
 import { MembersPanel } from './MembersPanel'
 import { useAppStore } from '@/stores/appStore'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 type Tab = 'general' | 'theme' | 'auth' | 'groups' | 'assets' | 'members'
 
@@ -38,12 +36,7 @@ function GeneralPanel({ appId }: { appId: string }): React.ReactElement {
   const handleSave = async (): Promise<void> => {
     setSaving(true)
     try {
-      await fetch(`${BACKEND_URL}/apps/${appId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name, slug }),
-      })
+      await clientFetch(`/apps/${appId}`, { method: 'PATCH', body: JSON.stringify({ name, slug }) })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } finally {

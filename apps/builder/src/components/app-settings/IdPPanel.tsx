@@ -4,9 +4,7 @@ import React, { useState } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import type { AppIdentityProvider } from '@/types/canvas'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 const IDP_TYPES = ['OIDC', 'SAML', 'Google', 'Okta', 'Auth0']
 type Environment = 'STAGING' | 'PRODUCTION'
@@ -25,17 +23,14 @@ function AddIdPModal({ appId, environment, onClose, onAdded }: AddIdPModalProps)
   const handleSave = async (): Promise<void> => {
     setSaving(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/portal-idps/${appId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...form, environment, enabled: true }),
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { idp: AppIdentityProvider }
+      try {
+        const data = await clientFetch<{ idp: AppIdentityProvider }>(
+          `/auth/portal-idps/${appId}`,
+          { method: 'POST', body: JSON.stringify({ ...form, environment, enabled: true }) }
+        )
         onAdded(data.idp)
         onClose()
-      }
+      } catch { /* keep modal open */ }
     } finally {
       setSaving(false)
     }
@@ -114,11 +109,8 @@ export function IdPPanel({ appId }: IdPPanelProps): React.ReactElement {
       p.id === idp.id ? { ...p, enabled: !p.enabled } : p
     )
     setIdProviders(updated)
-    await fetch(`${BACKEND_URL}/auth/portal-idps/${appId}/${idp.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ enabled: !idp.enabled }),
+    await clientFetch(`/auth/portal-idps/${appId}/${idp.id}`, {
+      method: 'PATCH', body: JSON.stringify({ enabled: !idp.enabled }),
     }).catch(() => undefined)
   }
 

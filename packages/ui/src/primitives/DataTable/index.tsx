@@ -45,7 +45,7 @@ export const dataTableManifest = {
   tags: ['table', 'data', 'grid', 'list'],
 }
 
-export function DataTable({ columns, data, pageSize = 10, striped = false, searchable = false, loading = false, error, onRowClick, className, style }: DataTableProps): React.ReactElement {
+export function DataTable({ columns = [], data = [], pageSize = 10, striped = false, searchable = false, loading = false, error, onRowClick, className, style }: DataTableProps): React.ReactElement {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [search, setSearch] = React.useState('')
 

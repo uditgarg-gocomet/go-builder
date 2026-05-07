@@ -471,6 +471,27 @@ export async function authRouter(fastify: FastifyInstance): Promise<void> {
     return reply.status(201).send(idp)
   })
 
+  // ── POST /auth/dev-login (development only) ──────────────────────────────────
+  if (process.env['NODE_ENV'] !== 'production') {
+    fastify.post('/dev-login', async (request, reply) => {
+      const body = request.body as { email?: string; role?: string } | undefined
+      const email = body?.email ?? 'dev@portal.local'
+      const role = (body?.role === 'ADMIN' ? 'ADMIN' : 'FDE') as 'ADMIN' | 'FDE'
+      const userId = `dev-${email.replace(/[^a-z0-9]/gi, '-')}`
+
+      const token = await signToken({
+        sub: userId,
+        email,
+        context: 'BUILDER' as const,
+        role,
+        idpType: 'DEV',
+        tokenFamily: `dev-${Date.now()}`,
+      })
+
+      return reply.status(200).send({ token, userId, email })
+    })
+  }
+
   fastify.patch<{ Params: { idpId: string } }>('/portal/idps/:idpId', async (request, reply) => {
     const body = UpdateAppIdPSchema.safeParse(request.body)
     if (!body.success) {

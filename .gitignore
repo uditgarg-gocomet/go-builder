@@ -7,6 +7,8 @@ dist/
 .next/
 out/
 .turbo/
+next-env.d.ts
+*.tsbuildinfo
 
 # Environment files — never commit
 .env
@@ -35,3 +37,18 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+# Docs
+docs/
+
+# Instructions
+instructions.md
+progress.md
+PROGRESS.md
+
+# Scripts
+scripts/build-shipments-view.py
+
+# Claude data
+.claude/
+CLAUDE.md

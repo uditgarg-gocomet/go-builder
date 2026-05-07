@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { usePageStore } from '@/stores/pageStore'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 interface PageVersion {
   id: string
@@ -43,11 +41,8 @@ export function VersionHistoryPanel({ userId }: VersionHistoryPanelProps): React
     if (!activePageId) return
     setLoading(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/schema/${activePageId}/history`, { credentials: 'include' })
-      if (res.ok) {
-        const data = (await res.json()) as { versions: PageVersion[] }
-        setVersions(data.versions ?? [])
-      }
+      const data = await clientFetch<{ versions: PageVersion[] }>(`/schema/${activePageId}/history`)
+      setVersions(data.versions ?? [])
     } finally {
       setLoading(false)
     }
@@ -63,30 +58,22 @@ export function VersionHistoryPanel({ userId }: VersionHistoryPanelProps): React
     if (!published || published.id === version.id) { setDiffVersionId(version.id); setDiffData(null); return }
 
     setDiffVersionId(version.id)
-    const res = await fetch(
-      `${BACKEND_URL}/schema/${activePageId}/diff?from=${published.id}&to=${version.id}`,
-      { credentials: 'include' }
-    )
-    if (res.ok) {
-      const data = (await res.json()) as unknown
+    try {
+      const data = await clientFetch<unknown>(`/schema/${activePageId}/diff?from=${published.id}&to=${version.id}`)
       setDiffData(data)
-    }
+    } catch { /* non-critical */ }
   }
 
   const handleRollback = async (): Promise<void> => {
     if (!rollbackTarget || !activePageId) return
     setRollingBack(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/schema/${activePageId}/rollback`, {
+      await clientFetch(`/schema/${activePageId}/rollback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ targetVersionId: rollbackTarget.id, rolledBackBy: userId }),
       })
-      if (res.ok) {
-        setRollbackTarget(null)
-        await fetchHistory()
-      }
+      setRollbackTarget(null)
+      await fetchHistory()
     } finally {
       setRollingBack(false)
     }

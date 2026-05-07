@@ -31,7 +31,7 @@ export const radioGroupManifest = {
   tags: ['radio', 'radiogroup', 'input', 'form', 'select'],
 }
 
-export function RadioGroup({ label, options, value, orientation = 'vertical', disabled = false, required = false, error, className, style, onChange, name }: RadioGroupProps): React.ReactElement {
+export function RadioGroup({ label, options = [], value, orientation = 'vertical', disabled = false, required = false, error, className, style, onChange, name }: RadioGroupProps): React.ReactElement {
   return (
     <div style={style} className={cn('flex flex-col gap-1', className)}>
       {label && (

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { requireAuth } from '../../middleware/auth.js'
 import {
   saveDraft,
+  getDraft,
   promoteToStaging,
   promoteToProduction,
   rollback,
@@ -31,6 +32,22 @@ export async function schemaRouter(fastify: FastifyInstance): Promise<void> {
       return reply.status(e.statusCode ?? 500).send({ error: e.message })
     }
   })
+
+  // ── GET /schema/:pageId/draft ─────────────────────────────────────────────────
+  fastify.get<{ Params: { pageId: string } }>(
+    '/:pageId/draft',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      try {
+        const result = await getDraft(request.params.pageId)
+        if (!result) return reply.status(200).send({ schema: null })
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
 
   // ── POST /schema/:versionId/promote/staging ───────────────────────────────────
   fastify.post<{ Params: { versionId: string } }>(

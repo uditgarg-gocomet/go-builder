@@ -3,9 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { usePageStore } from '@/stores/pageStore'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 type BumpType = 'patch' | 'minor' | 'major'
 type Environment = 'staging' | 'production'
@@ -49,14 +47,13 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
   useEffect(() => {
     if (!activePageId) return
     void (async () => {
-      const res = await fetch(`${BACKEND_URL}/schema/${activePageId}/history`, { credentials: 'include' })
-      if (res.ok) {
-        const data = (await res.json()) as { versions: PageVersion[] }
+      try {
+        const data = await clientFetch<{ versions: PageVersion[] }>(`/schema/${activePageId}/history`)
         const draft = data.versions.find(v => v.status === 'DRAFT')
         const published = data.versions.find(v => v.status === 'PUBLISHED' || v.status === 'STAGED')
         setDraftVersionId(draft?.id ?? null)
         setCurrentVersion(draft ?? published ?? data.versions[0] ?? null)
-      }
+      } catch { /* non-critical */ }
     })()
   }, [activePageId])
 
@@ -71,40 +68,29 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
     setBuildStatus('PENDING')
 
     try {
-      const endpoint = env === 'staging'
-        ? `${BACKEND_URL}/schema/${draftVersionId}/promote/staging`
-        : `${BACKEND_URL}/schema/${draftVersionId}/promote/production`
+      const path = env === 'staging'
+        ? `/schema/${draftVersionId}/promote/staging`
+        : `/schema/${draftVersionId}/promote/production`
 
-      const res = await fetch(endpoint, {
+      const data = await clientFetch<{ deployment?: { id: string } }>(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ bumpType, changelog: changelog.trim(), promotedBy: userId }),
       })
 
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string }
-        setError(body.error ?? 'Promotion failed')
-        setBuildStatus('idle')
-        return
-      }
-
       setBuildStatus('BUILDING')
 
-      // Poll deployment status
-      const data = (await res.json()) as { deployment?: { id: string } }
       const deploymentId = data.deployment?.id
       if (deploymentId) {
-        const poll = setInterval(async () => {
-          const dr = await fetch(`${BACKEND_URL}/apps/${appId}/deployment/${deploymentId}`, { credentials: 'include' })
-          if (dr.ok) {
-            const dData = (await dr.json()) as { status?: string }
-            const s = dData.status ?? ''
-            if (s === 'SUCCESS' || s === 'FAILED') {
-              setBuildStatus(s as BuildStatus)
-              clearInterval(poll)
-            }
-          }
+        const poll = setInterval(() => {
+          void clientFetch<{ status?: string }>(`/apps/${appId}/deployment/${deploymentId}`)
+            .then(dData => {
+              const s = dData.status ?? ''
+              if (s === 'SUCCESS' || s === 'FAILED') {
+                setBuildStatus(s as BuildStatus)
+                clearInterval(poll)
+              }
+            })
+            .catch(() => undefined)
         }, 2000)
       } else {
         setBuildStatus('SUCCESS')

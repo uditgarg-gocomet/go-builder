@@ -2,9 +2,7 @@
 
 import React, { useState } from 'react'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 type AppRole = 'OWNER' | 'EDITOR' | 'VIEWER'
 const ROLES: AppRole[] = ['OWNER', 'EDITOR', 'VIEWER']
@@ -27,12 +25,12 @@ export function MembersPanel({ appId }: MembersPanelProps): React.ReactElement {
   const [adding, setAdding] = useState(false)
 
   const fetchMembers = async (): Promise<void> => {
-    const res = await fetch(`${BACKEND_URL}/apps/${appId}/members`, { credentials: 'include' })
-    if (res.ok) {
-      const data = (await res.json()) as { members: AppMember[] }
+    try {
+      const data = await clientFetch<{ members: AppMember[] }>(`/apps/${appId}/members`)
       setMembers(data.members ?? [])
+    } catch { /* non-critical */ } finally {
+      setLoaded(true)
     }
-    setLoaded(true)
   }
 
   // Lazy load on first render
@@ -44,17 +42,12 @@ export function MembersPanel({ appId }: MembersPanelProps): React.ReactElement {
     if (!addEmail.trim()) return
     setAdding(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/apps/${appId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email: addEmail.trim(), role: addRole }),
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { member: AppMember }
-        setMembers(m => [...m, data.member])
-        setAddEmail('')
-      }
+      const data = await clientFetch<{ member: AppMember }>(
+        `/apps/${appId}/members`,
+        { method: 'POST', body: JSON.stringify({ email: addEmail.trim(), role: addRole }) }
+      )
+      setMembers(m => [...m, data.member])
+      setAddEmail('')
     } finally {
       setAdding(false)
     }
@@ -62,20 +55,14 @@ export function MembersPanel({ appId }: MembersPanelProps): React.ReactElement {
 
   const handleRoleChange = async (member: AppMember, role: AppRole): Promise<void> => {
     setMembers(ms => ms.map(m => m.id === member.id ? { ...m, role } : m))
-    await fetch(`${BACKEND_URL}/apps/${appId}/members/${member.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ role }),
+    await clientFetch(`/apps/${appId}/members/${member.id}`, {
+      method: 'PATCH', body: JSON.stringify({ role }),
     }).catch(() => undefined)
   }
 
   const handleRemove = async (member: AppMember): Promise<void> => {
     if (member.role === 'OWNER' && ownerCount <= 1) return
-    await fetch(`${BACKEND_URL}/apps/${appId}/members/${member.id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    }).catch(() => undefined)
+    await clientFetch(`/apps/${appId}/members/${member.id}`, { method: 'DELETE' }).catch(() => undefined)
     setMembers(ms => ms.filter(m => m.id !== member.id))
   }
 

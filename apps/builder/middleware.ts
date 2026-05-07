@@ -20,20 +20,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   try {
     const res = await fetch(`${BACKEND_URL}/auth/validate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
     })
 
     if (!res.ok) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    const data = (await res.json()) as { userId?: string; role?: string }
+    const data = (await res.json()) as { valid?: boolean; payload?: { sub?: string; role?: string } }
+    if (!data.valid) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
     const response = NextResponse.next()
-    if (data.userId) response.headers.set('x-fde-user-id', data.userId)
-    if (data.role) response.headers.set('x-fde-role', data.role)
+    if (data.payload?.sub) response.headers.set('x-fde-user-id', data.payload.sub)
+    if (data.payload?.role) response.headers.set('x-fde-role', data.payload.role)
     return response
   } catch {
     return NextResponse.redirect(new URL('/login', request.url))

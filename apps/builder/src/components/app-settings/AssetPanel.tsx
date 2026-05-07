@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch, getCookieToken } from '@/lib/clientFetch'
+
+const BACKEND_URL = process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001'
 
 interface Asset {
   id: string
@@ -38,11 +38,9 @@ export function AssetPanel({ appId }: AssetPanelProps): React.ReactElement {
     const params = new URLSearchParams({ appId })
     if (mimeFilter) params.set('mimeType', mimeFilter)
     if (search) params.set('search', search)
-    const res = await fetch(`${BACKEND_URL}/assets?${params}`, { credentials: 'include' })
-    if (res.ok) {
-      const data = (await res.json()) as { assets: Asset[] }
-      setAssets(data.assets ?? [])
-    }
+    await clientFetch<{ assets: Asset[] }>(`/assets?${params}`)
+      .then(data => setAssets(data.assets ?? []))
+      .catch(() => undefined)
   }
 
   useEffect(() => { void fetchAssets() }, [appId, mimeFilter, search]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -51,18 +49,16 @@ export function AssetPanel({ appId }: AssetPanelProps): React.ReactElement {
     setUploading(true)
     const form = new FormData()
     form.append('file', file)
-    await fetch(`${BACKEND_URL}/assets/upload`, {
-      method: 'POST',
-      headers: { 'x-app-id': appId },
-      credentials: 'include',
-      body: form,
-    }).catch(() => undefined)
+    const tok = getCookieToken()
+    const headers: Record<string, string> = { 'x-app-id': appId }
+    if (tok) headers['Authorization'] = `Bearer ${tok}`
+    await fetch(`${BACKEND_URL}/assets/upload`, { method: 'POST', headers, body: form }).catch(() => undefined)
     await fetchAssets()
     setUploading(false)
   }
 
   const handleDelete = async (asset: Asset): Promise<void> => {
-    await fetch(`${BACKEND_URL}/assets/${asset.id}`, { method: 'DELETE', credentials: 'include' })
+    await clientFetch(`/assets/${asset.id}`, { method: 'DELETE' }).catch(() => undefined)
     setAssets(a => a.filter(x => x.id !== asset.id))
   }
 

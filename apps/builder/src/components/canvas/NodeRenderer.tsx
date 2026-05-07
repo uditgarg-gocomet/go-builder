@@ -8,6 +8,11 @@ import { CanvasNodeWrapper } from './CanvasNodeWrapper'
 import { DropZone } from './DropZone'
 import type { CanvasNode } from '@/types/canvas'
 
+// Types that render children — show a drop zone when empty / at the end
+const CONTAINER_TYPES = new Set([
+  'Stack', 'Grid', 'Card', 'Tabs', 'Accordion', 'Modal', 'ErrorBoundary',
+])
+
 function useResolvedProps(node: CanvasNode): Record<string, unknown> {
   const { active } = useBreakpointStore()
   const base = node.props
@@ -33,12 +38,43 @@ export function NodeRenderer({ nodeId, depth = 0 }: NodeRendererProps): React.Re
   if (!node) return null
 
   const Component = resolvePrimitive(node.type)
+  const isContainer = CONTAINER_TYPES.has(node.type)
 
-  const children = childIds.length > 0
-    ? childIds.map(childId => <NodeRenderer key={childId} nodeId={childId} depth={depth + 1} />)
-    : depth > 0
-      ? null
-      : <DropZone id={`empty-${nodeId}`} label="Drop here" className="m-2 min-h-[60px]" />
+  let children: React.ReactNode = null
+
+  if (isContainer) {
+    if (childIds.length === 0) {
+      // Empty container — full-size drop zone
+      children = (
+        <DropZone
+          id={`empty-${nodeId}`}
+          data={{ parentId: nodeId, position: 0 }}
+          label="Drop here"
+          className="m-2 min-h-[80px]"
+        />
+      )
+    } else {
+      // Has children — render them + compact append zone at the end
+      children = (
+        <>
+          {childIds.map(childId => (
+            <NodeRenderer key={childId} nodeId={childId} depth={depth + 1} />
+          ))}
+          <DropZone
+            id={`append-${nodeId}`}
+            data={{ parentId: nodeId, position: childIds.length }}
+            label="+ drop here"
+            className="mx-2 mb-1 min-h-[32px] opacity-40 hover:opacity-100 transition-opacity"
+          />
+        </>
+      )
+    }
+  } else if (childIds.length > 0) {
+    // Non-container that somehow has children (e.g. loaded from schema) — render them
+    children = childIds.map(childId => (
+      <NodeRenderer key={childId} nodeId={childId} depth={depth + 1} />
+    ))
+  }
 
   const rendered = Component ? (
     <Component {...resolvedProps} style={node.style}>

@@ -30,7 +30,7 @@ export const selectManifest = {
   tags: ['select', 'dropdown', 'input', 'form'],
 }
 
-export function Select({ label, placeholder = 'Select…', options, value, error, disabled = false, required = false, className, style, onChange }: SelectProps): React.ReactElement {
+export function Select({ label, placeholder = 'Select…', options = [], value, error, disabled = false, required = false, className, style, onChange }: SelectProps): React.ReactElement {
   return (
     <div style={style} className={cn('flex flex-col gap-1', className)}>
       {label && (

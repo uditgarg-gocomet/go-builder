@@ -2,10 +2,7 @@
 
 import { create } from 'zustand'
 import type { RegistryEntry } from '@portal/core'
-
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 interface RegistryStore {
   entries: RegistryEntry[]
@@ -20,11 +17,7 @@ export const useRegistryStore = create<RegistryStore>()((set) => ({
   fetchEntries: async (appId) => {
     set({ isLoading: true })
     try {
-      const res = await fetch(`${BACKEND_URL}/registry/entries?appId=${encodeURIComponent(appId)}`, {
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error(`Registry fetch failed: ${res.status}`)
-      const data = (await res.json()) as { entries: RegistryEntry[] }
+      const data = await clientFetch<{ entries: RegistryEntry[] }>(`/registry/entries?appId=${encodeURIComponent(appId)}`)
       set({ entries: data.entries ?? [] })
     } catch {
       set({ entries: [] })

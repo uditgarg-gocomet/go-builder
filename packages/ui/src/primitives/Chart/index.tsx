@@ -34,7 +34,7 @@ export const chartManifest = {
 
 const DEFAULT_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899']
 
-export function Chart({ type = 'line', data, xKey = 'name', yKeys, colors = DEFAULT_COLORS, title, height = 300, showLegend = true, showGrid = true, className, style }: ChartProps): React.ReactElement {
+export function Chart({ type = 'line', data = [], xKey = 'name', yKeys = ['y'], colors = DEFAULT_COLORS, title, height = 300, showLegend = true, showGrid = true, className, style }: ChartProps): React.ReactElement {
   const effectiveColors = colors.length > 0 ? colors : DEFAULT_COLORS
 
   const commonProps = {

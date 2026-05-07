@@ -1,14 +1,83 @@
 import type React from 'react'
+import {
+  Stack,
+  Grid,
+  Divider,
+  Card,
+  Tabs,
+  Accordion,
+  Modal,
+  Button,
+  IconButton,
+  Link,
+  DropdownMenu,
+  Alert,
+  Spinner,
+  Skeleton,
+  EmptyState,
+  ErrorBoundary,
+  Heading,
+  Text,
+  RichText,
+  Badge,
+  Avatar,
+  Tag,
+  StatCard,
+  DataTable,
+  Chart,
+  TextInput,
+  NumberInput,
+  Select,
+  MultiSelect,
+  DatePicker,
+  Checkbox,
+  Toggle,
+  RadioGroup,
+  Textarea,
+  FileUpload,
+} from '@portal/ui'
 
-// Static map of primitive name → component. Populated lazily at module load time.
-// All imports must be from the built @portal/ui package.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PRIMITIVES: Record<string, React.ComponentType<any>> = {}
+const PRIMITIVES: Record<string, React.ComponentType<any>> = {
+  Stack,
+  Grid,
+  Divider,
+  Card,
+  Tabs,
+  Accordion,
+  Modal,
+  Button,
+  IconButton,
+  Link,
+  DropdownMenu,
+  Alert,
+  Spinner,
+  Skeleton,
+  EmptyState,
+  ErrorBoundary,
+  Heading,
+  Text,
+  RichText,
+  Badge,
+  Avatar,
+  Tag,
+  StatCard,
+  DataTable,
+  Chart,
+  TextInput,
+  NumberInput,
+  Select,
+  MultiSelect,
+  DatePicker,
+  Checkbox,
+  Toggle,
+  RadioGroup,
+  Textarea,
+  FileUpload,
+}
 
-export function registerPrimitives(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  map: Record<string, React.ComponentType<any>>
-): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function registerPrimitives(map: Record<string, React.ComponentType<any>>): void {
   Object.assign(PRIMITIVES, map)
 }
 

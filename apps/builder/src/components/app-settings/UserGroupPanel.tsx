@@ -4,9 +4,7 @@ import React, { useState } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import type { AppUserGroup } from '@/types/canvas'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 interface Member { id: string; identifier: string }
 
@@ -33,20 +31,17 @@ function GroupModal({ appId, initial, onClose, onSaved }: GroupModalProps): Reac
   const handleSave = async (): Promise<void> => {
     setSaving(true)
     try {
-      const url = initial
-        ? `${BACKEND_URL}/apps/${appId}/user-groups/${initial.id}`
-        : `${BACKEND_URL}/apps/${appId}/user-groups`
-      const res = await fetch(url, {
-        method: initial ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name, description, members: members.map(m => m.identifier) }),
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { group: AppUserGroup }
+      const path = initial
+        ? `/apps/${appId}/user-groups/${initial.id}`
+        : `/apps/${appId}/user-groups`
+      try {
+        const data = await clientFetch<{ group: AppUserGroup }>(path, {
+          method: initial ? 'PATCH' : 'POST',
+          body: JSON.stringify({ name, description, members: members.map(m => m.identifier) }),
+        })
         onSaved(data.group)
         onClose()
-      }
+      } catch { /* show no error, just keep modal open */ }
     } finally {
       setSaving(false)
     }
@@ -124,10 +119,7 @@ export function UserGroupPanel({ appId }: UserGroupPanelProps): React.ReactEleme
   }
 
   const handleDelete = async (group: AppUserGroup): Promise<void> => {
-    await fetch(`${BACKEND_URL}/apps/${appId}/user-groups/${group.id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    }).catch(() => undefined)
+    await clientFetch(`/apps/${appId}/user-groups/${group.id}`, { method: 'DELETE' }).catch(() => undefined)
     setUserGroups(userGroups.filter(g => g.id !== group.id))
   }
 

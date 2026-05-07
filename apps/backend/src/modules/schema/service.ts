@@ -101,8 +101,15 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     }
   }
 
-  const newVersion = await db.pageVersion.create({
-    data: {
+  // Upsert the DRAFT for this (pageId, version) pair so repeated saves don't conflict
+  const newVersion = await db.pageVersion.upsert({
+    where: { pageId_version: { pageId, version: currentVersionStr } },
+    update: {
+      schema: schema as unknown as object,
+      diffFromPrev: diffFromPrev !== undefined ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
+      createdBy: savedBy,
+    },
+    create: {
       pageId,
       version: currentVersionStr,
       schema: schema as unknown as object,
@@ -121,6 +128,22 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     },
     concurrentEditWarning,
   }
+}
+
+// ── getDraft ──────────────────────────────────────────────────────────────────
+
+export async function getDraft(pageId: string): Promise<{ schema: object } | null> {
+  const page = await db.page.findUnique({ where: { id: pageId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const draft = await db.pageVersion.findFirst({
+    where: { pageId, status: 'DRAFT' },
+    orderBy: { createdAt: 'desc' },
+    select: { schema: true },
+  })
+
+  if (!draft) return null
+  return { schema: draft.schema as object }
 }
 
 // ── promoteToStaging ──────────────────────────────────────────────────────────

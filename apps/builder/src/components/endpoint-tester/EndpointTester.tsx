@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 interface Connector {
   id: string
@@ -46,24 +44,16 @@ export function EndpointTester({ appId, onImportMock }: EndpointTesterProps): Re
   const [importAlias, setImportAlias] = useState('')
 
   useEffect(() => {
-    void (async () => {
-      const res = await fetch(`${BACKEND_URL}/connectors`, { credentials: 'include' })
-      if (res.ok) {
-        const data = (await res.json()) as { connectors: Connector[] }
-        setConnectors(data.connectors ?? [])
-      }
-    })()
+    void clientFetch<{ connectors: Connector[] }>('/connectors')
+      .then(data => setConnectors(data.connectors ?? []))
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {
     if (!selectedConnectorId) { setEndpoints([]); return }
-    void (async () => {
-      const res = await fetch(`${BACKEND_URL}/connectors/${selectedConnectorId}/endpoints`, { credentials: 'include' })
-      if (res.ok) {
-        const data = (await res.json()) as { endpoints: Endpoint[] }
-        setEndpoints(data.endpoints ?? [])
-      }
-    })()
+    void clientFetch<{ endpoints: Endpoint[] }>(`/connectors/${selectedConnectorId}/endpoints`)
+      .then(data => setEndpoints(data.endpoints ?? []))
+      .catch(() => undefined)
   }, [selectedConnectorId])
 
   const handleRun = async (): Promise<void> => {
@@ -96,19 +86,11 @@ export function EndpointTester({ appId, onImportMock }: EndpointTesterProps): Re
         try { payload['body'] = JSON.parse(body) as unknown } catch { /* ignore */ }
       }
 
-      const res = await fetch(`${BACKEND_URL}/endpoints/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-
-      const data = (await res.json()) as { status?: number; durationMs?: number; body?: unknown; error?: string }
-      if (!res.ok) {
-        setError(data.error ?? 'Test failed')
-      } else {
-        setResult({ status: data.status ?? res.status, durationMs: data.durationMs ?? 0, body: data.body })
-      }
+      const data = await clientFetch<{ status?: number; durationMs?: number; body?: unknown }>(
+        '/endpoints/test',
+        { method: 'POST', body: JSON.stringify(payload) }
+      )
+      setResult({ status: data.status ?? 200, durationMs: data.durationMs ?? 0, body: data.body })
     } catch (e) {
       setError(String(e))
     } finally {

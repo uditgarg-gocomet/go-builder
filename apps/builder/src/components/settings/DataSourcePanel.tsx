@@ -4,9 +4,7 @@ import React, { useState } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import type { DataSourceDef } from '@portal/core'
 
-const BACKEND_URL = typeof window !== 'undefined'
-  ? (process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001')
-  : 'http://localhost:3001'
+import { clientFetch } from '@/lib/clientFetch'
 
 function emptyDS(): Partial<DataSourceDef> {
   return {
@@ -40,13 +38,10 @@ function DataSourceModal({ initial, onSave, onClose }: DataSourceModalProps): Re
   const handleTest = async (): Promise<void> => {
     setTesting(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/endpoints/test`, {
+      const data = await clientFetch<unknown>('/endpoints/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ endpointId: form.endpointId, pathParams: form.pathParams }),
       })
-      const data: unknown = await res.json()
       setTestResult(data)
     } catch (e) {
       setTestResult({ error: String(e) })

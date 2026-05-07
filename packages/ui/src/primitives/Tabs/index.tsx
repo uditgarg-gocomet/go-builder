@@ -30,7 +30,7 @@ export const tabsManifest = {
   tags: ['layout', 'tabs', 'navigation'],
 }
 
-export function Tabs({ items, defaultValue, value, onValueChange, className, style }: TabsProps): React.ReactElement {
+export function Tabs({ items = [], defaultValue, value, onValueChange, className, style }: TabsProps): React.ReactElement {
   return (
     <RadixTabs.Root
       defaultValue={defaultValue ?? items[0]?.value}
