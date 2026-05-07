@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import type { PageSchema } from '@portal/core'
 import { ThemeProvider } from '@/lib/theme/themeInjector'
+import { AuthProvider } from '@/lib/auth/authContext'
 import { BindingProvider } from '@/lib/binding/bindingContext'
 import { ActionProvider } from '@/lib/actions/actionContext'
 import { SchemaRenderer } from '@/lib/renderer/schemaRenderer'
@@ -104,23 +105,28 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
 
   return (
     <ThemeProvider tokens={themeTokens} fonts={themeFonts}>
-      <BindingProvider
-        schema={schema}
-        urlParams={urlParams}
-        sessionToken={token}
-        userId={userId}
-        appId={data.deployment.appId}
+      <AuthProvider
+        initialToken={token}
+        initialUserId={userId}
       >
-        <ActionProvider
+        <BindingProvider
           schema={schema}
+          urlParams={urlParams}
           sessionToken={token}
-          appId={data.deployment.appId}
-          pageId={deploymentPage.page.id}
           userId={userId}
+          appId={data.deployment.appId}
         >
-          <SchemaRenderer schema={schema} />
-        </ActionProvider>
-      </BindingProvider>
+          <ActionProvider
+            schema={schema}
+            sessionToken={token}
+            appId={data.deployment.appId}
+            pageId={deploymentPage.page.id}
+            userId={userId}
+          >
+            <SchemaRenderer schema={schema} />
+          </ActionProvider>
+        </BindingProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

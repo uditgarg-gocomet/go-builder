@@ -54,9 +54,17 @@
 - [x] Next.js setup + auth edge middleware + build webhook (Session 6.1)
 - [x] Schema renderer + component resolver + static generation (Session 6.2)
 - [x] Data source resolver + binding context + polling (Session 6.3)
-- [ ] Action execution (action-runtime wired up)
+- [x] Action execution + auth context + form manager integration (Session 6.4)
 
 ## Notes
+
+### 2026-05-07 — Session 6.4: Action execution + auth context + form manager integration complete
+- src/lib/auth/authContext.tsx: AuthProvider client component; decodeJwtPayload() does base64url decode of JWT payload (no signature verification — middleware already verified); reads portal_session cookie via document.cookie on mount; provides { sessionToken, user: {id, email, groups}, refresh(), logout() }; refresh() calls /api/auth/refresh + re-reads cookie; logout() calls /api/auth/logout + clears state; accepts initialToken/initialUserId server props for hydration
+- src/lib/events/eventBridge.ts: re-exports eventBus singleton from @portal/action-runtime; useEmit(eventName) returns stable emit function; useSubscribe(eventName, handler) calls eventBus.on in useEffect with cleanup
+- src/lib/actions/actionContext.tsx: full ActionProvider — creates StateManager (initialised from schema.state, subscribe callback → updateState per key), FormManager (initialised with schema.forms, syncToContext → updateForm with full BindingContext.form shape including values/errors/isDirty/touched/isValid), ModalManager (emits modal:show/modal:hide on eventBus), ConfirmManager (window.confirm), DataResolver adapter (wraps DataSourceResolver.resolveSourceByAlias with bound sources); instantiates ActionExecutor with all deps; execute() calls executor.execute(actionId); renders inline toast overlay (fixed bottom-right, variant-aware styling, auto-dismiss, close button)
+- src/hooks/useAction.ts: useAction(binding) — reads ActionContext.execute, returns memoized () => void handler calling execute(binding.actionId, binding.params)
+- Provider hierarchy in page.tsx updated: ThemeProvider > AuthProvider > BindingProvider > ActionProvider > SchemaRenderer; AuthProvider receives initialToken + initialUserId from server headers
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-07 — Session 6.3: Data source resolver + binding context + polling complete
 - src/lib/data/transforms.ts: applyTransform(data, expression) — JSONata evaluate; Sentry captureException on error; rethrows
