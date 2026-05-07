@@ -1,0 +1,6 @@
+[
+  { "label": "Duplicate Shipment", "value": "duplicate_shipment" },
+  { "label": "Order Cancelled", "value": "order_cancelled" },
+  { "label": "Incorrect Details", "value": "incorrect_details" },
+  { "label": "Others", "value": "others" }
+]

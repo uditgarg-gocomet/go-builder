@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CancelShipmentModal",
+  "description": "Modal that captures cancellation reason + optional remarks.",
+  "type": "object",
+  "properties": {
+    "open": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the modal is visible. Bind to a state slot."
+    },
+    "workflowId": {
+      "type": "string",
+      "default": "",
+      "description": "ID of the workflow to cancel. Bind to a datasource field."
+    },
+    "mockMode": {
+      "type": "string",
+      "enum": ["success", "failure"],
+      "default": "success",
+      "description": "Phase A only — toggles deterministic mock outcome."
+    },
+    "mockDelayMs": {
+      "type": "number",
+      "minimum": 0,
+      "default": 800,
+      "description": "Phase A only — artificial latency for the mock submit."
+    },
+    "successEventName": {
+      "type": "string",
+      "default": "cancel-shipment:success",
+      "description": "Event name emitted on the eventBus on success."
+    },
+    "errorEventName": {
+      "type": "string",
+      "default": "cancel-shipment:error",
+      "description": "Event name emitted on the eventBus on failure."
+    },
+    "cancelEventName": {
+      "type": "string",
+      "default": "cancel-shipment:cancel",
+      "description": "Event name emitted on the eventBus when the user dismisses."
+    }
+  },
+  "additionalProperties": false
+}
