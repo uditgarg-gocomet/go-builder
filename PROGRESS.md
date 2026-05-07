@@ -52,14 +52,23 @@
 
 ## Phase 6 — App Renderer
 - [x] Next.js setup + auth edge middleware + build webhook (Session 6.1)
-- [ ] Schema renderer — recursive component tree
-- [ ] Component resolver
+- [x] Schema renderer + component resolver + static generation (Session 6.2)
 - [ ] Binding provider + DataSourceResolver
 - [ ] Action execution (action-runtime wired up)
-- [ ] Theme injection
-- [ ] Error boundaries
 
 ## Notes
+
+### 2026-05-07 — Session 6.2: Schema renderer + component resolver + static generation complete
+- src/lib/resolver/componentResolver.tsx: static PRIMITIVES map (34 components from @portal/ui), widgetCache Map for custom widgets; resolveComponent(node) routes by source (primitive/custom_widget/prebuilt_view); preloadCustomWidgets(nodes) flattens tree, dynamically imports custom widget bundles from bundleUrl prop; createPrebuiltViewComponent(node) uses React.lazy + dynamic import of NodeRenderer to avoid circular deps; UnknownComponent fallback renders warning box
+- src/lib/resolver/responsiveResolver.ts: useBreakpoint() — SSR-safe (useState default 'desktop', effect attaches MediaQueryList listeners for ≤640px/641-1024px); useResponsiveProps(node) returns node.responsive[breakpoint] overrides or {} for desktop
+- src/components/ErrorBoundary.tsx: TrackedErrorBoundary class component; getDerivedStateFromError captures error; componentDidCatch reports to Sentry (window.Sentry, swallows if unavailable); renders ComponentError fallback (type + message + nodeId)
+- src/lib/theme/themeInjector.tsx: ThemeProvider server component; builds :root { CSS vars } from tokens map; builds Google Fonts @import for fonts array; injects via dangerouslySetInnerHTML <style> tag; no-op passthrough if no tokens/fonts
+- src/lib/binding/bindingContext.tsx: BindingProvider client component (stub for 6.3); initialises state from schema.state defaults; provides full BindingContext shape (datasource:{}, params, user, env, state, form); updateState/updateForm callbacks
+- src/lib/actions/actionContext.tsx: ActionProvider client component (stub for 6.4); no-op execute; provides ActionContext shape
+- src/hooks/useResolvedProps.ts: useResolvedProps(node) — resolveBinding for all node.bindings, merges static props + resolved bindings + responsive overrides; useResolvedActions(node) — maps ActionBinding[] to trigger handlers that call execute
+- src/lib/renderer/schemaRenderer.tsx: NodeRenderer — resolveComponent, useResolvedProps, useResolvedActions, renders children recursively, wrapped in TrackedErrorBoundary; SchemaRenderer renders schema.layout via NodeRenderer
+- src/app/[appSlug]/[pageSlug]/page.tsx: generateStaticParams() fetches GET /apps/slug/:slug/deployment/:env, returns {appSlug,pageSlug}[] for all published pages; page component fetches deployment, finds page by slug, reads x-portal-user-id + x-portal-token from headers, mounts ThemeProvider > BindingProvider > ActionProvider > SchemaRenderer
+- TypeScript: tsc --noEmit passes with 0 errors
 
 ### 2026-05-07 — Session 6.1: Renderer setup + auth edge middleware + build webhook complete
 - next.config.ts: transpilePackages for @portal/ui/core/action-runtime
