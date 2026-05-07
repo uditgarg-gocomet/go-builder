@@ -4,7 +4,7 @@
 //           already passes everything needed; only the implementation below
 //           changes.
 
-import { MOCK_MESSAGES } from './constants.js'
+import { MOCK_MESSAGES, REAL_API_ROUTE } from './constants.js'
 import type {
   CancelShipmentPayload,
   CancelShipmentResult,
@@ -23,7 +23,7 @@ export const CANCEL_SHIPMENT_ENDPOINT = {
   connectorEndpointId: 'workflow-archive-unarchive',
 } as const
 
-// ── Mock implementation (Phase A) ────────────────────────────────────────────
+// ── Mock implementation ──────────────────────────────────────────────────────
 
 async function mockSubmit(
   _payload: CancelShipmentPayload,
@@ -38,22 +38,66 @@ async function mockSubmit(
   return { ok: true, message: MOCK_MESSAGES.success }
 }
 
+// ── Real implementation ──────────────────────────────────────────────────────
+// Posts to the renderer's same-origin proxy route. The route attaches the
+// gocomet token + schema server-side and returns a normalised result.
+
+interface ProxyResponse {
+  ok: boolean
+  message?: string
+  error?: string
+  status?: number
+}
+
+async function realSubmit(
+  payload: CancelShipmentPayload,
+): Promise<CancelShipmentResult> {
+  if (!payload.workflowId) {
+    return { ok: false, message: '', error: 'workflowId is required for real API call' }
+  }
+
+  let res: Response
+  try {
+    res = await fetch(REAL_API_ROUTE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflowId: payload.workflowId,
+        actionType: 'archive',
+      }),
+    })
+  } catch (err) {
+    return { ok: false, message: '', error: `Network error: ${(err as Error).message}` }
+  }
+
+  let json: ProxyResponse | null = null
+  try {
+    json = (await res.json()) as ProxyResponse
+  } catch {
+    // Non-JSON response — fall through.
+  }
+
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false,
+      message: '',
+      error: json?.error ?? `Request failed with status ${res.status}`,
+    }
+  }
+
+  return { ok: true, message: json.message ?? 'Shipment cancelled successfully' }
+}
+
 // ── Public service entrypoint ────────────────────────────────────────────────
-// Hook calls this. Swap the body in Phase E:
-//
-//   const widgetApi = useWidgetApi()
-//   const res = await widgetApi.executeConnector({
-//     mode: 'REGISTERED',
-//     endpointId: CANCEL_SHIPMENT_ENDPOINT.connectorEndpointId,
-//     body: { workflow_id: payload.workflowId, action_type: 'archive' },
-//   })
-//   return { ok: res.success, message: res.data?.message ?? '', error: res.error }
-//
-// (and remove `opts` from the signature once mocks are gone).
+// Hook calls this. Branches on apiMode — `mock` runs locally, `real` proxies
+// through /api/widgets/cancel-shipment.
 
 export async function submitCancellation(
   payload: CancelShipmentPayload,
   opts: SubmitOptions = {},
 ): Promise<CancelShipmentResult> {
+  if (opts.apiMode === 'real') {
+    return realSubmit(payload)
+  }
   return mockSubmit(payload, opts)
 }

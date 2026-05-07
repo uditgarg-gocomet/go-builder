@@ -27,6 +27,7 @@ const demoSchema: PageSchema = {
   },
   state: [
     { name: 'isCancelOpen',    type: 'boolean', defaultValue: false },
+    { name: 'apiMode',         type: 'string',  defaultValue: 'mock' },
     { name: 'mockMode',        type: 'string',  defaultValue: 'success' },
     { name: 'demoWorkflowId',  type: 'string',  defaultValue: 'WF-DEMO-1' },
   ],
@@ -34,25 +35,33 @@ const demoSchema: PageSchema = {
   forms: [],
   params: [],
   actions: [
-    // Atomic state-mutator the chained actions terminate on.
-    { id: 'setOpen', name: 'Open modal', type: 'SET_STATE', config: { key: 'isCancelOpen', value: true } },
+    // Atomic mutators — composed via outcomes.onSuccess chains below.
+    { id: 'setOpen',         name: 'Open modal',          type: 'SET_STATE', config: { key: 'isCancelOpen', value: true } },
+    { id: 'setApiModeMock',  name: 'Use mock API',        type: 'SET_STATE', config: { key: 'apiMode', value: 'mock' } },
+    { id: 'setApiModeReal',  name: 'Use real API',        type: 'SET_STATE', config: { key: 'apiMode', value: 'real' } },
+    { id: 'setMockSuccess',  name: 'Mock → success',      type: 'SET_STATE', config: { key: 'mockMode', value: 'success' } },
+    { id: 'setMockFailure',  name: 'Mock → failure',      type: 'SET_STATE', config: { key: 'mockMode', value: 'failure' } },
 
-    // Each entry-point flips `mockMode` then chains to `setOpen` via the
-    // built-in `outcomes.onSuccess` mechanism. Avoids RUN_SEQUENCE which has
-    // a known schema/executor mismatch (schema declares `steps`, executor
-    // reads `actions`).
+    // Composite entry-points wired to buttons. Each chains via outcomes.
     {
-      id: 'openSuccess',
-      name: 'Open (Success Mode)',
+      id: 'openMockSuccess',
+      name: 'Open (Mock · Success)',
       type: 'SET_STATE',
-      config: { key: 'mockMode', value: 'success' },
-      outcomes: { onSuccess: ['setOpen'] },
+      config: { key: 'apiMode', value: 'mock' },
+      outcomes: { onSuccess: ['setMockSuccess', 'setOpen'] },
     },
     {
-      id: 'openFailure',
-      name: 'Open (Failure Mode)',
+      id: 'openMockFailure',
+      name: 'Open (Mock · Failure)',
       type: 'SET_STATE',
-      config: { key: 'mockMode', value: 'failure' },
+      config: { key: 'apiMode', value: 'mock' },
+      outcomes: { onSuccess: ['setMockFailure', 'setOpen'] },
+    },
+    {
+      id: 'openReal',
+      name: 'Open (Real API)',
+      type: 'SET_STATE',
+      config: { key: 'apiMode', value: 'real' },
       outcomes: { onSuccess: ['setOpen'] },
     },
     { id: 'closeModal', name: 'Close modal', type: 'SET_STATE', config: { key: 'isCancelOpen', value: false } },
@@ -90,24 +99,33 @@ const demoSchema: PageSchema = {
         type: 'Stack',
         source: 'primitive',
         props: { direction: 'horizontal', gap: 3 },
-        bindings: {}, actions: [], style: { paddingTop: '8px' }, responsive: {},
+        bindings: {}, actions: [], style: { paddingTop: '8px', flexWrap: 'wrap' }, responsive: {},
         children: [
           {
-            id: 'btnSuccess',
+            id: 'btnMockSuccess',
             type: 'Button',
             source: 'primitive',
-            props: { label: 'Cancel Shipment (Success)', variant: 'destructive' },
+            props: { label: 'Mock · Success', variant: 'destructive' },
             bindings: {},
-            actions: [{ trigger: 'onClick', actionId: 'openSuccess' }],
+            actions: [{ trigger: 'onClick', actionId: 'openMockSuccess' }],
             style: {}, responsive: {}, children: [],
           },
           {
-            id: 'btnFailure',
+            id: 'btnMockFailure',
             type: 'Button',
             source: 'primitive',
-            props: { label: 'Cancel Shipment (Failure)', variant: 'outline' },
+            props: { label: 'Mock · Failure', variant: 'outline' },
             bindings: {},
-            actions: [{ trigger: 'onClick', actionId: 'openFailure' }],
+            actions: [{ trigger: 'onClick', actionId: 'openMockFailure' }],
+            style: {}, responsive: {}, children: [],
+          },
+          {
+            id: 'btnReal',
+            type: 'Button',
+            source: 'primitive',
+            props: { label: 'Real API', variant: 'default' },
+            bindings: {},
+            actions: [{ trigger: 'onClick', actionId: 'openReal' }],
             style: {}, responsive: {}, children: [],
           },
         ],
@@ -119,6 +137,7 @@ const demoSchema: PageSchema = {
         props: { mockDelayMs: 800 },
         bindings: {
           open:       '{{state.isCancelOpen}}',
+          apiMode:    '{{state.apiMode}}',
           mockMode:   '{{state.mockMode}}',
           workflowId: '{{state.demoWorkflowId}}',
         },

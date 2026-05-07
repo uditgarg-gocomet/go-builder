@@ -15,7 +15,11 @@ export interface CancelShipmentModalProps {
   open?: boolean
   workflowId?: string
 
-  // Mock controls (Phase A only)
+  // `mock` runs locally; `real` calls the gocomet workflow endpoint via the
+  // renderer's proxy route.
+  apiMode?: 'mock' | 'real'
+
+  // Mock controls (only used when apiMode='mock')
   mockMode?: 'success' | 'failure'
   mockDelayMs?: number
 
@@ -72,6 +76,7 @@ export interface CancelShipmentResult {
 }
 
 export interface SubmitOptions {
+  apiMode?: 'mock' | 'real'
   mockMode?: 'success' | 'failure'
   mockDelayMs?: number
 }

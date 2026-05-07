@@ -33,6 +33,7 @@ export function useCancelShipmentModal(
 ): CancelShipmentModalViewModel {
   const {
     workflowId,
+    apiMode = DEFAULTS.apiMode,
     mockMode = DEFAULTS.mockMode,
     mockDelayMs = DEFAULTS.mockDelayMs,
     successEventName = DEFAULTS.successEventName,
@@ -81,7 +82,7 @@ export function useCancelShipmentModal(
     const payloadRemarks = needsRemarks ? remarks : undefined
     const result = await submitCancellation(
       { workflowId, reason, remarks: payloadRemarks },
-      { mockMode, mockDelayMs },
+      { apiMode, mockMode, mockDelayMs },
     )
 
     if (!result.ok) {
@@ -118,6 +119,7 @@ export function useCancelShipmentModal(
     needsRemarks,
     remarks,
     workflowId,
+    apiMode,
     mockMode,
     mockDelayMs,
     successEventName,

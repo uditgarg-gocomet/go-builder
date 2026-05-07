@@ -8,12 +8,17 @@ import type { CancelReason } from './types.js'
 export const CANCEL_REASONS: ReadonlyArray<CancelReason> = cancelReasonsFixture
 
 export const DEFAULTS = {
+  apiMode: 'mock' as const,
   mockMode: 'success' as const,
   mockDelayMs: 800,
   successEventName: 'cancel-shipment:success',
   errorEventName: 'cancel-shipment:error',
   cancelEventName: 'cancel-shipment:cancel',
 } as const
+
+// Renderer route that proxies the call server-side. Stop-gap until the
+// go-builder connector proxy is wired (see Phase E roadmap).
+export const REAL_API_ROUTE = '/api/widgets/cancel-shipment'
 
 // Reason values that demand free-form remarks. Keep in sync with
 // fixtures/cancelReasons.json.

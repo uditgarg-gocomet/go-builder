@@ -14,11 +14,17 @@
       "default": "",
       "description": "ID of the workflow to cancel. Bind to a datasource field."
     },
+    "apiMode": {
+      "type": "string",
+      "enum": ["mock", "real"],
+      "default": "mock",
+      "description": "`mock` simulates the API locally; `real` proxies to the gocomet workflow endpoint via the renderer's /api/widgets/cancel-shipment route."
+    },
     "mockMode": {
       "type": "string",
       "enum": ["success", "failure"],
       "default": "success",
-      "description": "Phase A only — toggles deterministic mock outcome."
+      "description": "Only used when apiMode='mock'. Toggles deterministic mock outcome."
     },
     "mockDelayMs": {
       "type": "number",

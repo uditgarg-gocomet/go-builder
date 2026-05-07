@@ -808,6 +808,11 @@ const widgets: PrimitiveDefinition[] = [
       properties: {
         open: { type: 'boolean', default: false },
         workflowId: { type: 'string', default: '' },
+        apiMode: {
+          type: 'string',
+          enum: ['mock', 'real'],
+          default: 'mock',
+        },
         mockMode: {
           type: 'string',
           enum: ['success', 'failure'],
@@ -825,6 +830,7 @@ const widgets: PrimitiveDefinition[] = [
     defaultProps: {
       open: true,
       workflowId: 'WF-DEMO-1',
+      apiMode: 'mock',
       mockMode: 'success',
       mockDelayMs: 800,
       successEventName: 'cancel-shipment:success',
