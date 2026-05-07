@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import type { AppUserGroup } from '@/types/canvas'
 
@@ -18,7 +18,9 @@ interface GroupModalProps {
 function GroupModal({ appId, initial, onClose, onSaved }: GroupModalProps): React.ReactElement {
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
-  const [members, setMembers] = useState<Member[]>([])
+  const [members, setMembers] = useState<Member[]>(
+    (initial?.members ?? []).map(identifier => ({ id: crypto.randomUUID(), identifier })),
+  )
   const [newMember, setNewMember] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -109,6 +111,27 @@ export function UserGroupPanel({ appId }: UserGroupPanelProps): React.ReactEleme
   const userGroups = useAppStore(s => s.userGroups)
   const setUserGroups = useAppStore(s => s.setUserGroups)
   const [modal, setModal] = useState<{ initial?: AppUserGroup } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Hydrate the store from the backend when the panel mounts. App settings
+  // are loaded lazily (not as part of app bootstrap), so the store is empty
+  // the first time the user opens this tab.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const data = await clientFetch<{ groups: AppUserGroup[] }>(`/apps/${appId}/user-groups`)
+        if (!cancelled) setUserGroups(data.groups ?? [])
+      } catch {
+        /* panel shows empty state on error */
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [appId, setUserGroups])
 
   const handleSaved = (group: AppUserGroup): void => {
     if (userGroups.find(g => g.id === group.id)) {
@@ -133,7 +156,9 @@ export function UserGroupPanel({ appId }: UserGroupPanelProps): React.ReactEleme
         </button>
       </div>
 
-      {userGroups.length === 0 ? (
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Loading…</p>
+      ) : userGroups.length === 0 ? (
         <p className="text-xs text-muted-foreground">No groups configured.</p>
       ) : (
         <div className="flex flex-col gap-2">

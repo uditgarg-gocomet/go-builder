@@ -8,7 +8,10 @@ export const RegisterCustomWidgetSchema = z.object({
   icon: z.string().optional(),
   tags: z.array(z.string()).default([]),
   version: z.string().min(1),
-  bundleUrl: z.string().url(),
+  // Optional: omit for built-in widgets that are bundled with the Renderer
+  // (the Renderer's componentResolver pre-seeds them into the widget cache
+  // so no CDN fetch is needed). Required for externally-delivered widgets.
+  bundleUrl: z.string().url().optional(),
   bundleHash: z.string().optional(),
   propsSchema: z.record(z.unknown()),
   defaultProps: z.record(z.unknown()).default({}),

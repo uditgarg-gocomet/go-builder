@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { db } from '../../lib/db.js'
 import type { CreateApp, UpdateApp, CreatePage, UpdatePage, AddMember, UpdateMemberRole } from './types.js'
 
@@ -230,6 +231,8 @@ export async function getDeployment(slug: string, env: 'STAGING' | 'PRODUCTION')
       environment: deployment.environment,
       buildStatus: deployment.buildStatus,
       deployedAt: deployment.deployedAt,
+      header: app.headerConfig ?? null,
+      nav: app.navConfig ?? null,
       pages: deployment.pages.map(dp => ({
         pageVersionId: dp.pageVersionId,
         version: dp.pageVersion.version,
@@ -331,4 +334,192 @@ export async function createReply(
     data: { commentId, body: data.body, createdBy: data.createdBy },
   })
   return { reply }
+}
+
+// ── User groups ───────────────────────────────────────────────────────────────
+// Per-app group registry used by page/node visibility rules and by the
+// renderer's portal-session token (groups claim). In production an IdP
+// provisions members; for the POC the FDE manages them manually via the
+// Builder's App Settings → User Groups panel.
+
+function serializeGroup(group: {
+  id: string
+  appId: string
+  name: string
+  description: string | null
+  createdBy: string
+  createdAt: Date
+  members: { identifier: string }[]
+}) {
+  return {
+    id: group.id,
+    appId: group.appId,
+    name: group.name,
+    description: group.description,
+    createdBy: group.createdBy,
+    createdAt: group.createdAt,
+    members: group.members.map(m => m.identifier),
+  }
+}
+
+export async function listUserGroups(appId: string) {
+  const app = await db.app.findUnique({ where: { id: appId } })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+
+  const groups = await db.appUserGroup.findMany({
+    where: { appId },
+    orderBy: { name: 'asc' },
+    include: { members: true },
+  })
+  return { groups: groups.map(serializeGroup) }
+}
+
+export async function createUserGroup(
+  appId: string,
+  data: { name: string; description?: string | undefined; members: string[] },
+  createdBy: string,
+) {
+  const app = await db.app.findUnique({ where: { id: appId } })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+
+  const existing = await db.appUserGroup.findUnique({
+    where: { appId_name: { appId, name: data.name } },
+  })
+  if (existing) {
+    throw Object.assign(new Error(`Group "${data.name}" already exists`), { statusCode: 409 })
+  }
+
+  const group = await db.appUserGroup.create({
+    data: {
+      appId,
+      name: data.name,
+      description: data.description ?? null,
+      createdBy,
+      members: {
+        create: data.members.map(identifier => ({ identifier, addedBy: createdBy })),
+      },
+    },
+    include: { members: true },
+  })
+  return { group: serializeGroup(group) }
+}
+
+export async function updateUserGroup(
+  appId: string,
+  groupId: string,
+  data: { name?: string | undefined; description?: string | undefined; members?: string[] | undefined },
+) {
+  const group = await db.appUserGroup.findFirst({ where: { id: groupId, appId } })
+  if (!group) throw Object.assign(new Error('Group not found'), { statusCode: 404 })
+
+  // Rename conflict check
+  if (data.name && data.name !== group.name) {
+    const clash = await db.appUserGroup.findUnique({
+      where: { appId_name: { appId, name: data.name } },
+    })
+    if (clash) throw Object.assign(new Error(`Group "${data.name}" already exists`), { statusCode: 409 })
+  }
+
+  // Replace members when provided — diff against existing to avoid churn
+  if (data.members !== undefined) {
+    const existingMembers = await db.appUserGroupMember.findMany({ where: { groupId } })
+    const existingIds = new Set(existingMembers.map(m => m.identifier))
+    const nextIds = new Set(data.members)
+
+    const toAdd = data.members.filter(id => !existingIds.has(id))
+    const toRemove = existingMembers.filter(m => !nextIds.has(m.identifier))
+
+    if (toRemove.length > 0) {
+      await db.appUserGroupMember.deleteMany({
+        where: { id: { in: toRemove.map(m => m.id) } },
+      })
+    }
+    if (toAdd.length > 0) {
+      await db.appUserGroupMember.createMany({
+        data: toAdd.map(identifier => ({ groupId, identifier, addedBy: group.createdBy })),
+      })
+    }
+  }
+
+  const updated = await db.appUserGroup.update({
+    where: { id: groupId },
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+    },
+    include: { members: true },
+  })
+  return { group: serializeGroup(updated) }
+}
+
+export async function deleteUserGroup(appId: string, groupId: string): Promise<void> {
+  const group = await db.appUserGroup.findFirst({ where: { id: groupId, appId } })
+  if (!group) throw Object.assign(new Error('Group not found'), { statusCode: 404 })
+
+  await db.appUserGroupMember.deleteMany({ where: { groupId } })
+  await db.appUserGroup.delete({ where: { id: groupId } })
+}
+
+export async function listUserGroupsBySlug(slug: string) {
+  const app = await db.app.findUnique({ where: { slug } })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+  return listUserGroups(app.id)
+}
+
+// ── App chrome (header + nav config) ──────────────────────────────────────────
+// Per-app form-driven configuration rendered by the Renderer around every
+// page. Stored as JSONB columns on the App table — nullable, meaning null =
+// nothing rendered. No separate versioning; always-latest is sufficient for
+// the POC (same model as theme config).
+
+export async function getAppChrome(appId: string) {
+  const app = await db.app.findUnique({
+    where: { id: appId },
+    select: { id: true, headerConfig: true, navConfig: true },
+  })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+  return {
+    header: app.headerConfig ?? null,
+    nav: app.navConfig ?? null,
+  }
+}
+
+export async function getAppChromeBySlug(slug: string) {
+  const app = await db.app.findUnique({
+    where: { slug },
+    select: { id: true, headerConfig: true, navConfig: true },
+  })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+  return {
+    header: app.headerConfig ?? null,
+    nav: app.navConfig ?? null,
+  }
+}
+
+export async function updateAppHeader(
+  appId: string,
+  header: unknown | null,
+) {
+  const app = await db.app.findUnique({ where: { id: appId } })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+
+  await db.app.update({
+    where: { id: appId },
+    data: { headerConfig: header === null ? Prisma.JsonNull : (header as Prisma.InputJsonValue) },
+  })
+  return { header }
+}
+
+export async function updateAppNav(
+  appId: string,
+  nav: unknown | null,
+) {
+  const app = await db.app.findUnique({ where: { id: appId } })
+  if (!app) throw Object.assign(new Error('App not found'), { statusCode: 404 })
+
+  await db.app.update({
+    where: { id: appId },
+    data: { navConfig: nav === null ? Prisma.JsonNull : (nav as Prisma.InputJsonValue) },
+  })
+  return { nav }
 }

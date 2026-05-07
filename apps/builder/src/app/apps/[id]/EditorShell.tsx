@@ -30,6 +30,10 @@ import { SaveStatusIndicator } from '@/components/publish/SaveStatus'
 import { PromoteDialog } from '@/components/publish/PromoteDialog'
 import { VersionHistoryPanel } from '@/components/publish/VersionHistoryPanel'
 import { AppSettingsModal } from '@/components/app-settings/AppSettingsModal'
+import { CanvasChrome } from '@/components/layout/CanvasChrome'
+import { HeaderPropsPanel } from '@/components/layout/HeaderPropsPanel'
+import { NavPropsPanel } from '@/components/layout/NavPropsPanel'
+import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
 import { clientFetch, getCookieToken } from '@/lib/clientFetch'
 import type { AppMeta, PageMeta } from '@/types/canvas'
 
@@ -52,6 +56,12 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   const fetchEntries = useRegistryStore(s => s.fetchEntries)
   const loadCanvas = useCanvasStore(s => s.loadCanvas)
 
+  // Chrome + layout selection
+  const setHeaderConfig = useAppStore(s => s.setHeaderConfig)
+  const setNavConfig = useAppStore(s => s.setNavConfig)
+  const setUserGroups = useAppStore(s => s.setUserGroups)
+  const layoutSelection = useLayoutSelectionStore(s => s.selection)
+
   const resetCanvas = useCallback(() => {
     loadCanvas({ nodes: {}, rootId: '', childMap: {}, parentMap: {}, selectedNodeId: null, hoveredNodeId: null, dragState: null })
   }, [loadCanvas])
@@ -63,21 +73,45 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
       setActivePage(initialPages[0].id)
     }
     void fetchEntries(app.id)
+
+    // Bootstrap chrome + user groups so the Layout panels + nav visibility
+    // dropdowns are populated when the user first opens them.
+    void (async () => {
+      try {
+        const chrome = await clientFetch<{ header: unknown | null; nav: unknown | null }>(
+          `/apps/${app.id}/chrome`,
+        )
+        setHeaderConfig(chrome.header as never)
+        setNavConfig(chrome.nav as never)
+      } catch { /* non-critical */ }
+
+      try {
+        const groups = await clientFetch<{ groups: Array<{ id: string; name: string; description?: string | null; members?: string[] }> }>(
+          `/apps/${app.id}/user-groups`,
+        )
+        setUserGroups(groups.groups.map(g => ({
+          id: g.id,
+          name: g.name,
+          description: g.description ?? undefined,
+          members: g.members,
+        })))
+      } catch { /* non-critical */ }
+    })()
   }, [app.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load canvas state when active page changes
   useEffect(() => {
     if (!activePageId) return
+    resetCanvas() // Clear immediately so canvas isn't stale while fetch is in flight
     void (async () => {
       try {
         const data = await clientFetch<{ schema?: PageSchema }>(`/schema/${activePageId}/draft`)
         if (data.schema?.layout) {
           loadCanvas(deserializeSchemaToCanvas(data.schema))
-        } else {
-          resetCanvas()
         }
+        // No resetCanvas() here — already done synchronously above
       } catch {
-        resetCanvas()
+        // Canvas already reset above; nothing more to do
       }
     })()
   }, [activePageId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -287,10 +321,12 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
           {/* Left: component panel */}
           <ComponentPanel />
 
-          {/* Center: canvas */}
+          {/* Center: canvas wrapped in app chrome preview */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {activePage ? (
-              <BuilderCanvas />
+              <CanvasChrome>
+                <BuilderCanvas />
+              </CanvasChrome>
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                 {pages.length === 0 ? 'Add a page to get started' : 'Select a page'}
@@ -298,8 +334,12 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             )}
           </div>
 
-          {/* Right: props editor OR settings sidebar */}
-          {settingsOpen ? (
+          {/* Right: chrome panel > settings > history > props editor */}
+          {layoutSelection.kind === 'header' ? (
+            <HeaderPropsPanel appId={app.id} />
+          ) : layoutSelection.kind === 'nav' || layoutSelection.kind === 'nav-item' ? (
+            <NavPropsPanel appId={app.id} />
+          ) : settingsOpen ? (
             <SettingsSidebar open={settingsOpen} onClose={() => setSettingsOpen(false)} />
           ) : historyOpen ? (
             <VersionHistoryPanel userId={userId} />

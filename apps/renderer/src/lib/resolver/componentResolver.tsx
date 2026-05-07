@@ -41,6 +41,11 @@ import {
   FileUpload,
 } from '@portal/ui'
 
+// Static custom-widget imports. Widgets registered this way resolve without
+// a CDN fetch — they're bundled with the renderer. Add new built-in widgets
+// to `BUILT_IN_WIDGETS` below.
+import { DRDV, drdvManifest } from '../../widgets/DRDV/index.js'
+
 type ComponentType = React.ComponentType<Record<string, unknown>>
 
 const PRIMITIVES: Record<string, ComponentType> = {
@@ -83,6 +88,49 @@ const PRIMITIVES: Record<string, ComponentType> = {
 
 // Runtime cache for custom widgets loaded from CDN
 const widgetCache = new Map<string, ComponentType>()
+
+// Built-in custom widgets — bundled with the renderer, no CDN fetch needed.
+// Pre-seeded into widgetCache below so resolveComponent() finds them
+// immediately.
+const BUILT_IN_WIDGETS: Record<string, ComponentType> = {
+  DRDV: DRDV as ComponentType,
+}
+for (const [name, comp] of Object.entries(BUILT_IN_WIDGETS)) {
+  widgetCache.set(name, comp)
+}
+
+// ── Library-locked invariant ─────────────────────────────────────────────────
+// For each custom widget, the manifest declares the exact set of props the
+// page definition may supply. Any prop in the node definition that isn't in
+// this allowlist is dropped before the widget is rendered — so the page
+// definition cannot override internals of a registered widget.
+const WIDGET_PROP_ALLOWLIST: Record<string, Set<string>> = {
+  DRDV: new Set(Object.keys(drdvManifest.propsShape)),
+}
+
+export function filterWidgetProps(
+  widgetName: string,
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  const allowlist = WIDGET_PROP_ALLOWLIST[widgetName]
+  if (!allowlist) return props
+  const filtered: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(props)) {
+    if (allowlist.has(key)) {
+      filtered[key] = value
+    } else if (process.env['NODE_ENV'] !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[renderer] Prop "${key}" on widget "${widgetName}" is not declared in its manifest and was dropped.`,
+      )
+    }
+  }
+  return filtered
+}
+
+export function isBuiltInWidget(widgetName: string): boolean {
+  return widgetName in BUILT_IN_WIDGETS
+}
 
 function UnknownComponent({ type }: { type: string }): React.ReactElement {
   return (

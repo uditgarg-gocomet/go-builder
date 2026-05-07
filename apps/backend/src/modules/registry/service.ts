@@ -126,7 +126,7 @@ export async function registerCustomWidget(request: RegisterCustomWidgetRequest)
       version,
       propsSchema: propsSchema as Prisma.InputJsonValue,
       defaultProps: defaultProps as Prisma.InputJsonValue,
-      bundleUrl,
+      bundleUrl: bundleUrl ?? null,
       bundleHash: bundleHash ?? null,
       displayName,
       description: description ?? null,

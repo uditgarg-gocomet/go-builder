@@ -8,25 +8,20 @@ function flattenNode(
   childMap: Record<string, string[]>,
   parentMap: Record<string, string>,
 ): void {
-  const canvasNode: CanvasNode = {
-    id: node.id,
-    type: node.type,
-    source: node.source,
-    props: node.props,
-    bindings: node.bindings,
-    actions: node.actions,
-    style: node.style,
-    responsive: node.responsive,
-    dataSource: node.dataSource,
-  }
+  // Strip children (lifted into childMap) and keep everything else. An
+  // allowlist-free copy so future ComponentNode additions flow through without
+  // code changes. The cast is safe: ComponentNode's other fields are
+  // structurally a superset of CanvasNode.
+  const { children, ...rest } = node
+  const canvasNode = { ...rest } as CanvasNode
   nodes[node.id] = canvasNode
-  childMap[node.id] = node.children.map(c => c.id)
+  childMap[node.id] = children.map(c => c.id)
 
   if (parentId != null) {
     parentMap[node.id] = parentId
   }
 
-  for (const child of node.children) {
+  for (const child of children) {
     flattenNode(child, node.id, nodes, childMap, parentMap)
   }
 }

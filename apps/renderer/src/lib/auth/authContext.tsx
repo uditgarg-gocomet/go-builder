@@ -1,6 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { resolveRoleFixture, type RoleFixture } from './roleFixture.js'
 
 interface PortalUser {
   id: string
@@ -11,6 +13,9 @@ interface PortalUser {
 interface AuthContextValue {
   sessionToken: string | null
   user: PortalUser | null
+  // The mocked role active via ?role= (POC only). null when no mock is active
+  // and the user's real JWT groups are in effect.
+  mockedRole: RoleFixture | null
   refresh: () => Promise<boolean>
   logout: (appSlug?: string) => Promise<void>
 }
@@ -18,6 +23,7 @@ interface AuthContextValue {
 const AuthCtx = createContext<AuthContextValue>({
   sessionToken: null,
   user: null,
+  mockedRole: null,
   refresh: async () => false,
   logout: async () => undefined,
 })
@@ -80,11 +86,39 @@ export function AuthProvider({
   const [sessionToken, setSessionToken] = useState<string | null>(
     initialToken ?? null,
   )
-  const [user, setUser] = useState<PortalUser | null>(
+  const [baseUser, setBaseUser] = useState<PortalUser | null>(
     initialUserId
       ? { id: initialUserId, email: initialUserEmail ?? '', groups: initialUserGroups ?? [] }
       : null,
   )
+
+  // ── Mocked role override (POC auth fixture) ────────────────────────────────
+  // Read `?role=` from the current URL. When present and matching a known
+  // fixture, the fixture's `groups` replace the user's real JWT groups so the
+  // renderer visibility hook + widget permission hooks see the mocked role.
+  // The override is layered on top of the real session — tokens are still
+  // valid, we're only swapping the group membership that drives authorisation
+  // in the UI.
+  const searchParams = useSearchParams()
+  const roleParam = searchParams?.get('role') ?? null
+  const mockedRole = useMemo(() => resolveRoleFixture(roleParam), [roleParam])
+
+  // Resolve the user that downstream consumers see. When a mocked role is
+  // active and there is no real session, synthesise a stub portal user so
+  // the POC demo flow works without needing a real login.
+  const user: PortalUser | null = useMemo(() => {
+    if (mockedRole) {
+      if (baseUser) {
+        return { ...baseUser, groups: mockedRole.groups }
+      }
+      return {
+        id: `mock-${mockedRole.id}`,
+        email: `${mockedRole.id}@portal.local`,
+        groups: mockedRole.groups,
+      }
+    }
+    return baseUser
+  }, [baseUser, mockedRole])
 
   // On mount, read cookie client-side (in case server props weren't available)
   useEffect(() => {
@@ -93,7 +127,7 @@ export function AuthProvider({
       if (token) {
         setSessionToken(token)
         const payload = decodeJwtPayload(token)
-        setUser(parseUser(payload))
+        setBaseUser(parseUser(payload))
       }
     }
   }, [sessionToken])
@@ -107,7 +141,7 @@ export function AuthProvider({
       if (token) {
         setSessionToken(token)
         const payload = decodeJwtPayload(token)
-        setUser(parseUser(payload))
+        setBaseUser(parseUser(payload))
       }
       return true
     } catch {
@@ -121,11 +155,11 @@ export function AuthProvider({
       : '/api/auth/logout'
     await fetch(url, { method: 'POST' })
     setSessionToken(null)
-    setUser(null)
+    setBaseUser(null)
   }
 
   return (
-    <AuthCtx.Provider value={{ sessionToken, user, refresh, logout }}>
+    <AuthCtx.Provider value={{ sessionToken, user, mockedRole, refresh, logout }}>
       {children}
     </AuthCtx.Provider>
   )

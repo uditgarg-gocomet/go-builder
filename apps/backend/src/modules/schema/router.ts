@@ -8,12 +8,15 @@ import {
   rollback,
   getHistory,
   getDiff,
+  listDraftSnapshots,
+  restoreDraftSnapshot,
 } from './service.js'
 import {
   SaveDraftRequestSchema,
   PromoteRequestSchema,
   RollbackRequestSchema,
   DiffQuerySchema,
+  RestoreDraftSnapshotSchema,
 } from './types.js'
 
 export async function schemaRouter(fastify: FastifyInstance): Promise<void> {
@@ -136,6 +139,49 @@ export async function schemaRouter(fastify: FastifyInstance): Promise<void> {
 
       try {
         const result = await getDiff(request.params.pageId, query.data.from, query.data.to)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── GET /schema/:pageId/draft/history ─────────────────────────────────────────
+  // Returns last-N draft snapshots (rolling cap ~50). Each save of the draft
+  // captures the *previous* state, so this is the audit trail of overwrites.
+  fastify.get<{ Params: { pageId: string } }>(
+    '/:pageId/draft/history',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      try {
+        const snapshots = await listDraftSnapshots(request.params.pageId)
+        return reply.status(200).send({ snapshots })
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── POST /schema/:pageId/draft/restore ────────────────────────────────────────
+  // Restores a snapshot into the current DRAFT. The pre-restore state is itself
+  // captured as a snapshot, so a restore is always reversible.
+  fastify.post<{ Params: { pageId: string } }>(
+    '/:pageId/draft/restore',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      const body = RestoreDraftSnapshotSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+
+      try {
+        const result = await restoreDraftSnapshot(
+          request.params.pageId,
+          body.data.snapshotId,
+          body.data.restoredBy,
+        )
         return reply.status(200).send(result)
       } catch (err: unknown) {
         const e = err as { message?: string; statusCode?: number }

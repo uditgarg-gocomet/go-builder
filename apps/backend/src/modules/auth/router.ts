@@ -472,12 +472,48 @@ export async function authRouter(fastify: FastifyInstance): Promise<void> {
   })
 
   // ── POST /auth/dev-login (development only) ──────────────────────────────────
+  // Mints a dev session token without going through an IdP. Supports both
+  // BUILDER context (FDE login into the App Builder) and PORTAL context
+  // (end-user login into a rendered app). For PORTAL, accepts `appId`,
+  // `environment`, and `groups` so the POC role fixture (ops_admin /
+  // ops_viewer) can drive the renderer's visibility hooks and widget
+  // permission hooks.
   if (process.env['NODE_ENV'] !== 'production') {
     fastify.post('/dev-login', async (request, reply) => {
-      const body = request.body as { email?: string; role?: string } | undefined
+      const body = request.body as {
+        email?: string
+        role?: string
+        context?: 'BUILDER' | 'PORTAL'
+        appId?: string
+        environment?: 'STAGING' | 'PRODUCTION'
+        groups?: string[]
+      } | undefined
       const email = body?.email ?? 'dev@portal.local'
-      const role = (body?.role === 'ADMIN' ? 'ADMIN' : 'FDE') as 'ADMIN' | 'FDE'
+      const context = body?.context === 'PORTAL' ? 'PORTAL' : 'BUILDER'
       const userId = `dev-${email.replace(/[^a-z0-9]/gi, '-')}`
+      const tokenFamily = `dev-${Date.now()}`
+
+      if (context === 'PORTAL') {
+        const environment = body?.environment === 'PRODUCTION' ? 'PRODUCTION' : 'STAGING'
+        const appId = body?.appId ?? ''
+        const groups = Array.isArray(body?.groups) ? body.groups.map(String) : []
+
+        const token = await signToken({
+          sub: userId,
+          email,
+          context: 'PORTAL' as const,
+          appId,
+          environment,
+          groups,
+          idpType: 'DEV',
+          tokenFamily,
+        })
+
+        return reply.status(200).send({ token, userId, email, context, appId, environment, groups })
+      }
+
+      // BUILDER (default, backwards compatible)
+      const role = (body?.role === 'ADMIN' ? 'ADMIN' : 'FDE') as 'ADMIN' | 'FDE'
 
       const token = await signToken({
         sub: userId,
@@ -485,10 +521,10 @@ export async function authRouter(fastify: FastifyInstance): Promise<void> {
         context: 'BUILDER' as const,
         role,
         idpType: 'DEV',
-        tokenFamily: `dev-${Date.now()}`,
+        tokenFamily,
       })
 
-      return reply.status(200).send({ token, userId, email })
+      return reply.status(200).send({ token, userId, email, context, role })
     })
   }
 

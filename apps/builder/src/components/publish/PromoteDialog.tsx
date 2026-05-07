@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { usePageStore } from '@/stores/pageStore'
+import { useAppStore } from '@/stores/appStore'
 
 import { clientFetch } from '@/lib/clientFetch'
 
@@ -33,6 +34,8 @@ function bumpVersion(version: string, bump: BumpType): string {
 
 export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): React.ReactElement {
   const activePageId = usePageStore(s => s.activePageId)
+  const pages = usePageStore(s => s.pages)
+  const app = useAppStore(s => s.app)
 
   const [currentVersion, setCurrentVersion] = useState<PageVersion | null>(null)
   const [draftVersionId, setDraftVersionId] = useState<string | null>(null)
@@ -42,6 +45,7 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
   const [buildStatus, setBuildStatus] = useState<BuildStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [promoting, setPromoting] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Load history to find current draft
   useEffect(() => {
@@ -104,6 +108,28 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
   }
 
   const done = buildStatus === 'SUCCESS' || buildStatus === 'FAILED'
+
+  // ── Published URL ────────────────────────────────────────────────────────────
+  // Renderer URL convention: /<appSlug>/<pageSlug>. The renderer is one
+  // deployment per tenant, so in production the Builder would typically be
+  // configured with the client's custom domain via NEXT_PUBLIC_RENDERER_URL.
+  // Falls back to http://localhost:3002 for local dev.
+  const rendererBase = (process.env['NEXT_PUBLIC_RENDERER_URL'] ?? 'http://localhost:3002').replace(/\/$/, '')
+  const activePage = pages.find(p => p.id === activePageId)
+  const publishedUrl = app && activePage
+    ? `${rendererBase}/${app.slug}/${activePage.slug}`
+    : null
+
+  const copyUrl = async (): Promise<void> => {
+    if (!publishedUrl) return
+    try {
+      await navigator.clipboard.writeText(publishedUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* clipboard may be blocked — user can copy from the anchor manually */
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -183,22 +209,58 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
 
         {/* Build status */}
         {buildStatus !== 'idle' && (
-          <div className={`flex items-center gap-2 rounded border px-3 py-2 text-sm ${
+          <div className={`flex flex-col gap-2 rounded border px-3 py-2 text-sm ${
             buildStatus === 'SUCCESS' ? 'border-green-500/30 bg-green-500/5 text-green-600'
             : buildStatus === 'FAILED' ? 'border-destructive/30 bg-destructive/5 text-destructive'
             : 'border-amber-500/30 bg-amber-500/5 text-amber-600'
           }`}>
-            {(buildStatus === 'PENDING' || buildStatus === 'BUILDING') && (
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <div className="flex items-center gap-2">
+              {(buildStatus === 'PENDING' || buildStatus === 'BUILDING') && (
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              )}
+              {buildStatus === 'SUCCESS' && <span>✓</span>}
+              {buildStatus === 'FAILED' && <span>✗</span>}
+              <span>
+                {buildStatus === 'PENDING' ? 'Queued…'
+                  : buildStatus === 'BUILDING' ? 'Building…'
+                  : buildStatus === 'SUCCESS' ? 'Published successfully!'
+                  : 'Build failed'}
+              </span>
+            </div>
+
+            {/* Published URL — shown after SUCCESS. We link to the page the
+                FDE just promoted so they can open it in a new tab or copy
+                the URL to share with the client. */}
+            {buildStatus === 'SUCCESS' && publishedUrl && (
+              <div className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5">
+                <a
+                  href={publishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 truncate font-mono text-xs text-foreground hover:underline"
+                  title={publishedUrl}
+                >
+                  {publishedUrl}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void copyUrl()}
+                  className="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                  title="Copy URL"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <a
+                  href={publishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10"
+                  title="Open in new tab"
+                >
+                  Open ↗
+                </a>
+              </div>
             )}
-            {buildStatus === 'SUCCESS' && <span>✓</span>}
-            {buildStatus === 'FAILED' && <span>✗</span>}
-            <span>
-              {buildStatus === 'PENDING' ? 'Queued…'
-                : buildStatus === 'BUILDING' ? 'Building…'
-                : buildStatus === 'SUCCESS' ? 'Published successfully!'
-                : 'Build failed'}
-            </span>
           </div>
         )}
 

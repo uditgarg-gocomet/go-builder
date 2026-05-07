@@ -8,6 +8,7 @@ export {
   StateSlotDefSchema as StateSlotDefZ,
   ThemeOverrideSchema as ThemeOverrideZ,
   PageParamDefSchema as PageParamDefZ,
+  NodeVisibilitySchema as NodeVisibilityZ,
 } from '../types/schema.js'
 
 export {

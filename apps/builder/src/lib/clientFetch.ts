@@ -22,7 +22,10 @@ export function clientFetch<T>(
 
   return fetch(`${BACKEND_URL}${path}`, { ...init, headers }).then(async res => {
     if (res.status === 401) {
-      window.location.href = '/login'
+      if (typeof window !== 'undefined') {
+        const next = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.href = `/login?next=${next}`
+      }
       throw new Error('Unauthorized')
     }
     if (!res.ok) {

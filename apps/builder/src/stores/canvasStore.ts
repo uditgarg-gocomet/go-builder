@@ -68,16 +68,17 @@ export const useCanvasStore = create<CanvasStore>()(
 
       addNode: (type, source, parentId, position, defaults = {}) => {
         const id = generateId()
+        const d = defaults as Partial<CanvasNode>
         const node: CanvasNode = {
-          id,
-          type,
-          source,
           props: {},
           bindings: {},
           actions: [],
           style: {},
           responsive: {},
-          ...defaults,
+          ...d,
+          id,    // always the store-generated id — never inherit from defaults
+          type,
+          source,
         }
         set(produce<CanvasStore>(state => {
           state.nodes[id] = node

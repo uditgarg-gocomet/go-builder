@@ -11,6 +11,24 @@ export const ResponsiveOverrideSchema = z.object({
   mobile: z.record(z.string(), z.unknown()).optional(),
 })
 
+// ── Visibility (renderer permission hook) ─────────────────────────────────────
+// Declared in the page definition; enforced by the renderer. When the current
+// user's groups do not satisfy the rule the node is removed from the React tree
+// entirely (not CSS-hidden), so hidden nav items / sections do not appear in
+// the DOM.
+//
+//   requireGroups → user.groups must contain at least one of these
+//   hideForGroups → user.groups must NOT contain any of these
+//
+// If both are provided, both must pass. When the field is absent the node is
+// always visible.
+export const NodeVisibilitySchema = z.object({
+  requireGroups: z.array(z.string()).optional(),
+  hideForGroups: z.array(z.string()).optional(),
+})
+
+export type NodeVisibility = z.infer<typeof NodeVisibilitySchema>
+
 // ── ComponentNode (recursive) ─────────────────────────────────────────────────
 
 export const ComponentNodeSchema: z.ZodType<ComponentNode> = z.lazy(() =>
@@ -25,6 +43,7 @@ export const ComponentNodeSchema: z.ZodType<ComponentNode> = z.lazy(() =>
     responsive: ResponsiveOverrideSchema,
     children: z.array(z.lazy(() => ComponentNodeSchema)),
     dataSource: ComponentDataSourceSchema.optional(),
+    visibility: NodeVisibilitySchema.optional(),
   })
 )
 
@@ -44,6 +63,7 @@ export interface ComponentNode {
     sorting?: { enabled: boolean; fieldParam?: string | undefined; directionParam?: string | undefined } | undefined
     filtering?: { enabled: boolean; params?: Record<string, string> | undefined } | undefined
   } | undefined
+  visibility?: NodeVisibility | undefined
 }
 
 // ── Page metadata ─────────────────────────────────────────────────────────────

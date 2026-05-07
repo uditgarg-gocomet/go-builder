@@ -39,7 +39,8 @@ export function BuilderCanvas(): React.ReactElement {
           ) : (
             <DropZone
               id="canvas-root-drop"
-              data={{ parentId: '' }}
+              parentId=""
+              position={0}
               label="Drag components from the panel to get started"
               className="m-4 min-h-[400px]"
             />

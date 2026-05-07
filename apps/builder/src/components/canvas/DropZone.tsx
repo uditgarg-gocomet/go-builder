@@ -1,16 +1,19 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 
 interface DropZoneProps {
   id: string
+  parentId: string
+  position: number
   label?: string
   className?: string
-  data?: Record<string, unknown>
 }
 
-export function DropZone({ id, label = 'Drop components here', className, data }: DropZoneProps): React.ReactElement {
+export function DropZone({ id, parentId, position, label = 'Drop components here', className }: DropZoneProps): React.ReactElement {
+  // Memoize data so dnd-kit doesn't see a fresh object every render.
+  const data = useMemo(() => ({ parentId, position }), [parentId, position])
   const { isOver, setNodeRef } = useDroppable({ id, data })
 
   return (

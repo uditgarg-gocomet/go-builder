@@ -1,4 +1,4 @@
-import type { ComponentDataSource } from '@portal/core'
+import type { ComponentDataSource, NodeVisibility } from '@portal/core'
 
 export interface CanvasNode {
   id: string
@@ -10,6 +10,7 @@ export interface CanvasNode {
   style: Record<string, unknown>
   responsive: { tablet?: Record<string, unknown> | undefined; mobile?: Record<string, unknown> | undefined }
   dataSource?: ComponentDataSource | undefined
+  visibility?: NodeVisibility | undefined
 }
 
 export interface DragState {
@@ -62,6 +63,7 @@ export interface AppUserGroup {
   id: string
   name: string
   description?: string | undefined
+  members?: string[] | undefined
 }
 
 export interface ClipboardEntry {

@@ -30,7 +30,7 @@ export class ActionExecutor {
     this.deps = deps
   }
 
-  async execute(actionId: string, correlationId?: string): Promise<ExecuteResult> {
+  async execute(actionId: string, correlationId?: string, triggerArgs?: unknown): Promise<ExecuteResult> {
     const id = correlationId ?? generateCorrelationId()
     const action = this.deps.actions.find(a => a.id === actionId)
     if (!action) {
@@ -42,7 +42,7 @@ export class ActionExecutor {
     let error: string | undefined
 
     try {
-      data = await this.dispatch(action, id)
+      data = await this.dispatch(action, id, triggerArgs)
       success = true
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
@@ -56,20 +56,25 @@ export class ActionExecutor {
 
     if (success && action.outcomes?.onSuccess) {
       for (const nextId of action.outcomes.onSuccess) {
-        await this.execute(nextId, id)
+        await this.execute(nextId, id, triggerArgs)
       }
     } else if (!success && action.outcomes?.onError) {
       for (const nextId of action.outcomes.onError) {
-        await this.execute(nextId, id)
+        await this.execute(nextId, id, triggerArgs)
       }
     }
 
     return result
   }
 
-  private async dispatch(action: ActionDef, correlationId: string): Promise<unknown> {
+  private async dispatch(action: ActionDef, correlationId: string, triggerArgs?: unknown): Promise<unknown> {
     const bc = this.deps.bindingContext()
-    const cfg = interpolate(action.config as Record<string, unknown>, bc) as Record<string, unknown>
+    // Merge trigger args under `event` so config templates like
+    // `{{event.shipmentId}}` resolve to row/click data passed by the component.
+    const bcWithEvent = triggerArgs !== undefined
+      ? ({ ...bc, event: triggerArgs } as unknown as BindingContext)
+      : bc
+    const cfg = interpolate(action.config as Record<string, unknown>, bcWithEvent) as Record<string, unknown>
 
     switch (action.type) {
       case 'API_CALL':

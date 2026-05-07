@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 
 export interface FDESession {
   userId: string
@@ -8,6 +9,8 @@ export interface FDESession {
   role: 'ADMIN' | 'FDE'
   exp: number
 }
+
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/refresh']
 
 function parseJwt(token: string): Record<string, unknown> | null {
   try {
@@ -26,17 +29,34 @@ function getCookie(name: string): string | null {
   return match?.[1] != null ? decodeURIComponent(match[1]) : null
 }
 
+function readSession(): FDESession | null {
+  const token = getCookie('session')
+  if (!token) return null
+  const payload = parseJwt(token)
+  if (!payload) return null
+  const exp = Number(payload['exp'] ?? 0)
+  // exp is unix seconds; treat 0/missing as no-expiry (dev tokens)
+  if (exp > 0 && exp * 1000 < Date.now()) return null
+  return {
+    userId: String(payload['sub'] ?? ''),
+    email: String(payload['email'] ?? ''),
+    role: (payload['role'] as 'ADMIN' | 'FDE') ?? 'FDE',
+    exp,
+  }
+}
+
 export function useSession(): FDESession | null {
-  return useMemo(() => {
-    const token = getCookie('session')
-    if (!token) return null
-    const payload = parseJwt(token)
-    if (!payload) return null
-    return {
-      userId: String(payload['sub'] ?? ''),
-      email: String(payload['email'] ?? ''),
-      role: (payload['role'] as 'ADMIN' | 'FDE') ?? 'FDE',
-      exp: Number(payload['exp'] ?? 0),
-    }
-  }, [])
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const session = useMemo(() => readSession(), [])
+
+  useEffect(() => {
+    if (PUBLIC_PATHS.some(p => pathname?.startsWith(p))) return
+    if (session) return
+    const next = pathname ? `?next=${encodeURIComponent(pathname)}` : ''
+    router.replace(`/login${next}`)
+  }, [session, pathname, router])
+
+  return session
 }

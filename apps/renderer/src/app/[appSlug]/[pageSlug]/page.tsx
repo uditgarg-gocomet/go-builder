@@ -1,13 +1,14 @@
 import React from 'react'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
-import type { PageSchema } from '@portal/core'
+import type { PageSchema, HeaderConfig, NavConfig } from '@portal/core'
 import { ThemeProvider } from '@/lib/theme/themeInjector'
 import { AuthProvider } from '@/lib/auth/authContext'
 import { BindingProvider } from '@/lib/binding/bindingContext'
 import { ActionProvider } from '@/lib/actions/actionContext'
 import { SchemaRenderer } from '@/lib/renderer/schemaRenderer'
-import { preloadCustomWidgets } from '@/lib/resolver/componentResolver'
+import { AppHeader } from '@/components/chrome/AppHeader'
+import { AppNav } from '@/components/chrome/AppNav'
 
 const BACKEND_INTERNAL_URL = process.env['BACKEND_INTERNAL_URL'] ?? 'http://localhost:3001'
 const APP_ENVIRONMENT = (process.env['APP_ENVIRONMENT'] ?? 'STAGING') as 'STAGING' | 'PRODUCTION'
@@ -34,6 +35,8 @@ interface DeploymentResponse {
     environment: string
     buildStatus: string
     pages: DeploymentPage[]
+    header: HeaderConfig | null
+    nav: NavConfig | null
   }
 }
 
@@ -86,8 +89,10 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
     notFound()
   }
 
-  // Preload any custom widget bundles
-  await preloadCustomWidgets([schema.layout])
+  // Note: custom widget preloading (CDN bundle imports) is a client-side
+  // concern — the renderer's componentResolver pre-seeds built-in widgets
+  // (DRDV, etc.) into its cache at module load. External CDN-delivered
+  // widgets are loaded on-demand when their node renders.
 
   // Extract user info injected by middleware
   const headerStore = await headers()
@@ -102,6 +107,15 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
 
   const themeTokens = schema.theme?.tokens
   const themeFonts = schema.theme?.fonts
+  const headerConfig = data.deployment.header
+  const navConfig = data.deployment.nav
+
+  // Build a logo URL if the header references an asset. The assets module
+  // serves content-addressed URLs from /assets/:key so this is a direct
+  // construction rather than a per-request lookup.
+  const logoUrl = headerConfig?.logoAssetId
+    ? `${BACKEND_INTERNAL_URL}/assets/${headerConfig.logoAssetId}`
+    : undefined
 
   return (
     <ThemeProvider tokens={themeTokens} fonts={themeFonts}>
@@ -123,7 +137,24 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
             pageId={deploymentPage.page.id}
             userId={userId}
           >
-            <SchemaRenderer schema={schema} />
+            <div className="min-h-screen flex flex-col">
+              {headerConfig?.enabled && (
+                <AppHeader config={headerConfig} appSlug={appSlug} logoUrl={logoUrl} />
+              )}
+              <div className="flex flex-1">
+                {navConfig?.enabled && navConfig.position === 'side' && (
+                  <AppNav config={navConfig} appSlug={appSlug} />
+                )}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {navConfig?.enabled && navConfig.position === 'top' && (
+                    <AppNav config={navConfig} appSlug={appSlug} />
+                  )}
+                  <main className="flex-1">
+                    <SchemaRenderer schema={schema} />
+                  </main>
+                </div>
+              </div>
+            </div>
           </ActionProvider>
         </BindingProvider>
       </AuthProvider>

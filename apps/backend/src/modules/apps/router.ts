@@ -18,6 +18,15 @@ import {
   listComments,
   resolveComment,
   createReply,
+  listUserGroups,
+  listUserGroupsBySlug,
+  createUserGroup,
+  updateUserGroup,
+  deleteUserGroup,
+  getAppChrome,
+  getAppChromeBySlug,
+  updateAppHeader,
+  updateAppNav,
 } from './service.js'
 import {
   CreateAppSchema,
@@ -27,6 +36,10 @@ import {
   AddMemberSchema,
   UpdateMemberRoleSchema,
   AppSlugDeploymentParamsSchema,
+  CreateUserGroupSchema,
+  UpdateUserGroupSchema,
+  UpdateHeaderRequestSchema,
+  UpdateNavRequestSchema,
 } from './types.js'
 
 export async function appsRouter(fastify: FastifyInstance): Promise<void> {
@@ -293,4 +306,154 @@ export async function appsRouter(fastify: FastifyInstance): Promise<void> {
       }
     }
   )
+
+  // ── User groups CRUD (authenticated) ──────────────────────────────────────────
+
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/user-groups',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      try {
+        const result = await listUserGroups(request.params.id)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/user-groups',
+    { preHandler: [requireAuth, requireAppRole('EDITOR')] },
+    async (request, reply) => {
+      const body = CreateUserGroupSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+      const session = request.fdeSession!
+      try {
+        const result = await createUserGroup(request.params.id, body.data, session.sub)
+        return reply.status(201).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  fastify.patch<{ Params: { id: string; groupId: string } }>(
+    '/:id/user-groups/:groupId',
+    { preHandler: [requireAuth, requireAppRole('EDITOR')] },
+    async (request, reply) => {
+      const body = UpdateUserGroupSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+      try {
+        const result = await updateUserGroup(request.params.id, request.params.groupId, body.data)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  fastify.delete<{ Params: { id: string; groupId: string } }>(
+    '/:id/user-groups/:groupId',
+    { preHandler: [requireAuth, requireAppRole('EDITOR')] },
+    async (request, reply) => {
+      try {
+        await deleteUserGroup(request.params.id, request.params.groupId)
+        return reply.status(204).send()
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── Public list-by-slug (no auth) ─────────────────────────────────────────────
+  // Used by the Renderer's dev-login form to populate the role selector from
+  // the app's configured groups before the user authenticates. Returns only
+  // metadata (id, name, description) — no member identifiers — so no PII is
+  // leaked in the unauthenticated response.
+  fastify.get<{ Params: { slug: string } }>('/slug/:slug/user-groups', async (request, reply) => {
+    try {
+      const result = await listUserGroupsBySlug(request.params.slug)
+      const safe = result.groups.map(g => ({
+        id: g.id,
+        name: g.name,
+        description: g.description,
+      }))
+      return reply.status(200).send({ groups: safe })
+    } catch (err: unknown) {
+      const e = err as { message?: string; statusCode?: number }
+      return reply.status(e.statusCode ?? 500).send({ error: e.message })
+    }
+  })
+
+  // ── App chrome (header + nav) ─────────────────────────────────────────────────
+
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/chrome',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      try {
+        const result = await getAppChrome(request.params.id)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  fastify.patch<{ Params: { id: string } }>(
+    '/:id/header',
+    { preHandler: [requireAuth, requireAppRole('EDITOR')] },
+    async (request, reply) => {
+      const body = UpdateHeaderRequestSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+      try {
+        const result = await updateAppHeader(request.params.id, body.data.header)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  fastify.patch<{ Params: { id: string } }>(
+    '/:id/nav',
+    { preHandler: [requireAuth, requireAppRole('EDITOR')] },
+    async (request, reply) => {
+      const body = UpdateNavRequestSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+      try {
+        const result = await updateAppNav(request.params.id, body.data.nav)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // Public chrome lookup for the Renderer — no auth required (runtime read)
+  fastify.get<{ Params: { slug: string } }>('/slug/:slug/chrome', async (request, reply) => {
+    try {
+      const result = await getAppChromeBySlug(request.params.slug)
+      return reply.status(200).send(result)
+    } catch (err: unknown) {
+      const e = err as { message?: string; statusCode?: number }
+      return reply.status(e.statusCode ?? 500).send({ error: e.message })
+    }
+  })
 }

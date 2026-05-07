@@ -37,6 +37,11 @@ model App {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // App chrome — per-app header + navigation config. Nullable; when null
+  // nothing renders. Shared across all pages of the app.
+  headerConfig Json?
+  navConfig    Json?
+
   pages       Page[]
   members     AppMember[]
   deployments Deployment[]
@@ -106,6 +111,27 @@ enum PageVersionStatus {
   PUBLISHED
   ARCHIVED
   ROLLED_BACK
+}
+
+// ─── Draft Snapshot History ───────────────────────────────────────────────────
+// Auto-captured on every saveDraft call (with content-hash dedup). Provides a
+// last-N-edits audit trail so we can revert if a draft was overwritten by an
+// accidental edit. Separate from PageVersion (which is the promotion
+// lifecycle) — snapshots never leave DRAFT stage and are capped per page.
+
+model DraftSnapshot {
+  id            String   @id @default(cuid())
+  pageId        String
+  schema        Json
+  schemaHash    String
+  nodeCount     Int
+  size          Int
+  label         String?
+  createdBy     String
+  createdAt     DateTime @default(now())
+
+  @@index([pageId, createdAt])
+  @@index([pageId, schemaHash])
 }
 
 model Deployment {

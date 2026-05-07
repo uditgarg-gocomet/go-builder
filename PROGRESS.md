@@ -344,3 +344,104 @@
 - Two models not in spec but implied by relations: `DataSource` (from `App.dataSources`) and `AnalyticsEvent` (from `Page.analytics`) — added minimal definitions.
 - `FDEUser` model added (implied by auth module POC scope: "FDE user model — ADMIN | FDE roles").
 - pnpm 9+ available at `/opt/homebrew/bin/pnpm`; Node 20 at `/opt/homebrew/opt/node@20/bin/node`.
+
+### 2026-05-07 — POC Objectives Phase 1: Permission hooks + DRDV widget foundation
+**Status:** Steps 1–5 complete. Steps 6 (registry seed) + 7 (page update) ready to run.
+
+#### Step 1: Schema additions (ComponentNode.visibility + manifest.permissions)
+- `packages/core/src/types/schema.ts`: added `NodeVisibilitySchema` (`requireGroups?`, `hideForGroups?`) and extended `ComponentNode` / `ComponentNodeSchema` with optional `visibility` field. Nav items and arbitrary subtrees can now declare visibility rules enforced by the renderer.
+- `packages/core/src/types/registry.ts`: added `WidgetPermissionsSchema` (`fields.<name>.editFor/viewFor`, `actions.<name>.enabledFor`) and attached `permissions` to both `ComponentManifestSchema` and `RegistryEntryVersionSchema` so widget versions carry their own permission declarations.
+- `packages/core/src/zod/schema.ts`: added `NodeVisibilityZ` re-export.
+- `pnpm --filter @portal/core build` — OK (13.73 kB ESM).
+
+#### Step 2: Renderer visibility enforcement
+- `apps/renderer/src/lib/renderer/schemaRenderer.tsx`: `NodeRenderer` now returns `null` (not CSS-hidden) when a node's `visibility` rule fails against `context.user.groups`. Whole subtree is stripped from the React tree — satisfies "hidden nav item not present in DOM".
+- Hook ordering preserved: `useResolvedProps` / `useResolvedActions` always run; visibility check happens after so React's rules of hooks are respected.
+
+#### Step 3: Mocked auth fixture (`?role=ops_admin` / `?role=ops_viewer`)
+- `apps/renderer/src/lib/auth/roleFixture.ts`: committed `ROLE_FIXTURES` with `ops_admin` + `ops_viewer` — groups + description.
+- `apps/renderer/src/lib/auth/authContext.tsx`: reads `?role=` via `useSearchParams`; when a matching fixture is present the user's groups are overridden before they flow through the rest of the app. Synthesises a stub portal user when no session exists so the POC demo works without logging in. Adds `mockedRole` to the context value for UI debugging.
+- `apps/renderer/src/lib/binding/bindingContext.tsx`: switched to reading `user` from `useAuth()` so the mocked-role override flows into `BindingContext.user.groups` (which drives both the renderer visibility hook and each widget's permission hook). Props-based userId/email/groups kept as a fallback.
+
+#### Step 4: DRDV widget
+- `apps/renderer/src/widgets/DRDV/index.tsx`:
+  - Full React component — renders a document extraction view (header, field grid, action bar) matching the POC objective doc's screenshot.
+  - Config: `fieldsToShow`, `validationRules`, `showActions`, `heading` — configuration-only differentiation works via the `heading` + `fieldsToShow` + `showActions` axes.
+  - Data: consumes `documents: DRDVDocument[]` typed JSON, defaults to the first doc.
+  - Events: Approve / Reject emit on `eventBus` (`drdv:approve` / `drdv:reject`) — event names overridable via props for page-level wiring.
+  - Permissions: consults `user.groups` against the widget's local manifest (`drdvManifest.permissions`) to flip each field between input and read-only box and to disable Approve/Reject for `ops_viewer`.
+  - Exports `drdvManifest` with `permissions`, `events`, `propsShape` — single source of truth shared with the resolver guard and the registry seed.
+- `apps/renderer/src/lib/resolver/componentResolver.tsx`:
+  - Pre-seeds DRDV into `widgetCache` via a `BUILT_IN_WIDGETS` map so `source: 'custom_widget'` + `type: 'DRDV'` resolves without a CDN fetch.
+  - `preloadCustomWidgets` already skips fetch when cache has entry — no changes needed there.
+
+#### Step 5: Library-locked invariant (widget props guard)
+- `apps/renderer/src/lib/resolver/componentResolver.tsx`: added `WIDGET_PROP_ALLOWLIST` (keyed from manifest `propsShape`), `filterWidgetProps()`, `isBuiltInWidget()`.
+- `apps/renderer/src/lib/renderer/schemaRenderer.tsx`: when `node.source === 'custom_widget'` and the type is a built-in widget, props are filtered through the manifest allowlist before reaching the component. Unknown keys are dropped (and warned in dev). Page definitions cannot inject arbitrary overrides into widget internals.
+
+#### Step 6: Widget registry seed + page update (ready to run)
+- `apps/backend/src/modules/registry/types.ts`: `bundleUrl` now optional (`z.string().url().optional()`) — built-in widgets need no CDN URL.
+- `apps/backend/src/modules/registry/service.ts`: persists `bundleUrl: null` when omitted.
+- `scripts/seed-drdv-widget.py`: posts DRDV manifest + propsSchema + permissions to `POST /registry/custom-widget` as a tenant-local widget. Idempotent — reports existing entry on second run.
+- `scripts/build-shipment-detail-view.py`:
+  - `node()` helper now accepts `visibility` + `source` kwargs.
+  - Added nav bar with a "Settings" link gated to `ops_admin` (hidden from DOM for `ops_viewer`).
+  - Added two DRDV widget instances with different configs (full review with actions + required fields; compact view with 3 fields and no action bar) — proves configuration-only differentiation.
+  - Inline mock documents list hydrates the widget (data source binding deferred per user note).
+
+#### TypeScript / tests
+- `pnpm --filter @portal/renderer exec tsc --noEmit` — 0 errors.
+- `pnpm --filter @portal/builder exec tsc --noEmit` — 0 errors.
+- `pnpm --filter @portal/backend exec tsc --noEmit` — 0 errors.
+- `pnpm --filter @portal/backend test` — 101 passing, 3 failing (pre-existing `db.pageVersion.upsert` mock drift in schema.test.ts, unrelated to these changes).
+
+#### Remaining POC work
+- Step 7 — permission-denied logging: extend `ActionStatus` enum to include `DENIED`, add short-circuit + log emit in `ActionExecutor`. Writes a row to `/action-logs` when a role-gated action fires.
+- Optional — a persisted auth fixture UI (role switcher dropdown in the renderer header) for the Fri 8 May demo.
+- Optional — bind DRDV to a real mocked data source in the page's `dataSources` (currently inlined in `props.documents`).
+
+### 2026-05-07 — Draft snapshot history + autosave hardening + publish URL
+Follow-ups after the initial POC work to address real issues that surfaced during testing.
+
+#### Silent-drop fix in canvas ↔ schema round-trip
+- `apps/builder/src/types/canvas.ts`: `CanvasNode` now includes `visibility?: NodeVisibility`. The Builder was dropping the new visibility field on every load → save cycle because the flat canvas type didn't have it.
+- `apps/builder/src/lib/schema/serialize.ts`: `canvasNodeToComponentNode` switched from allowlist (`{id, type, source, props, ...}`) to `{...node, children}` spread. Any future `ComponentNode` field now flows through without needing to touch this file.
+- `apps/builder/src/lib/schema/deserialize.ts`: `flattenNode` switched from allowlist to `{children, ...rest}` destructure. Same rationale.
+- `apps/backend/src/modules/schema/types.ts`: `ComponentNodeZ` (the backend's Zod validation of `saveDraft` payloads) now includes `visibility`. Without this, any POST would have stripped `visibility` before storing, independent of the Builder changes.
+
+#### Draft snapshot history (auto-save audit trail)
+- `apps/backend/prisma/schema.prisma`: new `DraftSnapshot` model — `{id, pageId, schema, schemaHash, nodeCount, size, label, createdBy, createdAt}` with indexes on `(pageId, createdAt)` and `(pageId, schemaHash)`.
+- Migration `20260507100000_add_draft_snapshot`: applied directly via `psql` (Prisma's migrate dev wanted to reset due to OpenFGA drift in the same db), then marked resolved. Prisma client regenerated.
+- `apps/backend/src/modules/schema/service.ts`:
+  - `DRAFT_SNAPSHOT_LIMIT = 50` rolling cap per page.
+  - `saveDraft` snapshots the *previous* draft state before overwriting (SHA-256 content dedup — skip if same as last snapshot). Fire-and-forget so a snapshot failure can't fail the save.
+  - `listDraftSnapshots(pageId)` — returns summaries ordered by `createdAt desc`.
+  - `restoreDraftSnapshot(pageId, snapshotId, restoredBy)` — routes back through `saveDraft` so the restore itself captures a snapshot of the pre-restore state (i.e. restores are reversible).
+- `apps/backend/src/modules/schema/router.ts`:
+  - `GET /schema/:pageId/draft/history` → `{ snapshots: [...] }`
+  - `POST /schema/:pageId/draft/restore` → takes `{ snapshotId, restoredBy }`, returns the new draft version
+
+#### Unified History panel
+- `apps/builder/src/components/publish/VersionHistoryPanel.tsx`: added a "Published" / "Auto-save" tab toggle at the top of the panel.
+  - Published tab: existing behaviour (versions with status badges, diff viewer, rollback).
+  - Auto-save tab: new — lists draft snapshots with `nodeCount`, formatted size, relative + absolute timestamp, createdBy. "Restore" button per row → confirmation dialog → POST to restore endpoint → re-fetch draft + `loadCanvas(deserializeSchemaToCanvas(...))` so the canvas reflects the restored state immediately.
+
+#### Auto-save initial-load dedup
+- `apps/builder/src/hooks/useAutoSave.ts` rewritten.
+  - Root cause: the effect watched `[nodes, childMap]` references; `loadCanvas()` on page load replaces both with new objects, so the load itself looked identical to a user edit and scheduled a save 1.5s later. This was the mechanism that silently overwrote script-built schemas.
+  - Fix: content fingerprint via `JSON.stringify({nodes, childMap, rootId})`. On page change the fingerprint ref resets to `null`. First non-empty observation seeds the ref and marks status "saved" with **no network call**. Subsequent observations save only if the fingerprint differs from the last-saved one.
+  - Side effects: protects against no-op drags (drag + drop to same spot), and a restore from history won't double-save because the fingerprint matches the just-saved state.
+
+#### Published URL in publish dialog
+- `apps/builder/.env.example` + `.env.local`: new `NEXT_PUBLIC_RENDERER_URL=http://localhost:3002` var.
+- `apps/builder/src/components/publish/PromoteDialog.tsx`: after a successful promote, the success banner now shows the full published URL (`${rendererBase}/${app.slug}/${activePage.slug}`) with Copy button and "Open ↗" link. Copy feedback is a 2s "Copied!" label swap on the button.
+
+#### TypeScript / tests
+- `pnpm --filter @portal/backend exec tsc --noEmit` — 0 errors.
+- `pnpm --filter @portal/builder exec tsc --noEmit` — 0 errors.
+- `pnpm --filter @portal/renderer exec tsc --noEmit` — 0 errors (not modified this session).
+- Backend tests — 101 passing, 3 pre-existing failures (unchanged, the `db.pageVersion.upsert` mock drift in `schema.test.ts`).
+
+#### Operational notes
+- Re-ran `scripts/build-shipments-view.py` after the snapshot code went live to verify: the previous 60-node state was captured as a DraftSnapshot row before being overwritten. `GET /schema/:pageId/draft/history` returns it correctly.
+- Renderer `next.config.ts` gained `webpack.resolve.extensionAlias` so ESM-style `.js` imports resolve to `.ts`/`.tsx` source (Webpack doesn't do this by default, tsc does via `moduleResolution: bundler`). Cold restart required for `next.config.*` changes; source edits hot-reload normally.

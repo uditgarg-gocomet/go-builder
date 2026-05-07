@@ -57,7 +57,10 @@ function useToastManager(): { manager: ToastManager; toasts: ToastItem[]; dismis
 // ── ActionContext ─────────────────────────────────────────────────────────────
 
 interface ActionContextValue {
-  execute: (actionId: string, params?: Record<string, unknown>) => Promise<void>
+  // `triggerArgs` is the first argument the component passes to the trigger
+  // callback (e.g. the `row` object in DataTable.onRowClick). It's exposed in
+  // action-config templates as `{{event.<field>}}`.
+  execute: (actionId: string, params?: Record<string, unknown>, triggerArgs?: unknown) => Promise<void>
 }
 
 const ActionCtx = createContext<ActionContextValue>({
@@ -168,9 +171,13 @@ export function ActionProvider({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken, schema.pageId, appId, pageId, userId])
 
-  async function execute(actionId: string, _params?: Record<string, unknown>): Promise<void> {
+  async function execute(
+    actionId: string,
+    _params?: Record<string, unknown>,
+    triggerArgs?: unknown,
+  ): Promise<void> {
     if (!executorRef.current) return
-    await executorRef.current.execute(actionId)
+    await executorRef.current.execute(actionId, undefined, triggerArgs)
   }
 
   return (

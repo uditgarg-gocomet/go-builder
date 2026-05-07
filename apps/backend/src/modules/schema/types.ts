@@ -25,6 +25,10 @@ export const ComponentNodeZ = (z.lazy(() =>
       pagination: z.object({ enabled: z.boolean(), pageParam: z.string().optional() }).optional(),
       sorting: z.object({ enabled: z.boolean(), fieldParam: z.string().optional() }).optional(),
     }).optional(),
+    visibility: z.object({
+      requireGroups: z.array(z.string()).optional(),
+      hideForGroups: z.array(z.string()).optional(),
+    }).optional(),
   })
 )) as unknown as z.ZodType<ComponentNode>
 
@@ -39,6 +43,7 @@ export interface ComponentNode {
   responsive: { tablet?: Record<string, unknown>; mobile?: Record<string, unknown> }
   children: ComponentNode[]
   dataSource?: { alias: string; pagination?: object; sorting?: object }
+  visibility?: { requireGroups?: string[]; hideForGroups?: string[] }
 }
 
 // ── PageSchema ────────────────────────────────────────────────────────────────
@@ -130,6 +135,12 @@ export const DiffQuerySchema = z.object({
   to: z.string().min(1),
 })
 
+export const RestoreDraftSnapshotSchema = z.object({
+  snapshotId: z.string().min(1),
+  restoredBy: z.string().min(1),
+})
+
 export type SaveDraftRequest = z.infer<typeof SaveDraftRequestSchema>
 export type PromoteRequest = z.infer<typeof PromoteRequestSchema>
 export type RollbackRequest = z.infer<typeof RollbackRequestSchema>
+export type RestoreDraftSnapshotRequest = z.infer<typeof RestoreDraftSnapshotSchema>

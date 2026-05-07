@@ -1,12 +1,14 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const BACKEND_URL = process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001'
 
 export function DevLoginForm(): React.ReactElement {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams?.get('next') ?? '/apps'
   const [email, setEmail] = useState('dev@portal.local')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +43,7 @@ export function DevLoginForm(): React.ReactElement {
         return
       }
 
-      router.push('/apps')
+      router.push(next.startsWith('/') ? next : '/apps')
     } catch {
       setError('Network error')
     } finally {

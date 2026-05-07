@@ -2,7 +2,10 @@
 
 import { create } from 'zustand'
 import { produce } from 'immer'
-import type { DataSourceDef, ActionDef, FormDef, StateSlotDef, ThemeOverride } from '@portal/core'
+import type {
+  DataSourceDef, ActionDef, FormDef, StateSlotDef, ThemeOverride,
+  HeaderConfig, NavConfig, NavItem,
+} from '@portal/core'
 import type { AppMeta, AppIdentityProvider, AppUserGroup } from '@/types/canvas'
 
 interface AppStore {
@@ -14,6 +17,10 @@ interface AppStore {
   stateSlots: StateSlotDef[]
   idProviders: AppIdentityProvider[]
   userGroups: AppUserGroup[]
+  // Chrome — header + nav config fetched alongside the app. null = not
+  // configured; the Renderer won't render anything for that slot.
+  headerConfig: HeaderConfig | null
+  navConfig: NavConfig | null
 
   setApp: (app: AppMeta) => void
   setTheme: (theme: ThemeOverride) => void
@@ -35,6 +42,30 @@ interface AppStore {
 
   setIdProviders: (providers: AppIdentityProvider[]) => void
   setUserGroups: (groups: AppUserGroup[]) => void
+
+  // Chrome setters
+  setHeaderConfig: (header: HeaderConfig | null) => void
+  updateHeaderConfig: (updates: Partial<HeaderConfig>) => void
+  setNavConfig: (nav: NavConfig | null) => void
+  updateNavConfig: (updates: Partial<NavConfig>) => void
+  setNavItems: (items: NavItem[]) => void
+}
+
+const DEFAULT_HEADER: HeaderConfig = {
+  enabled: true,
+  showAppTitle: true,
+  showLogo: false,
+  title: '',
+  globalSearch: { enabled: false },
+  showUserMenu: true,
+}
+
+const DEFAULT_NAV: NavConfig = {
+  enabled: true,
+  position: 'side',
+  style: 'text-and-icon',
+  collapsible: true,
+  items: [],
 }
 
 export const useAppStore = create<AppStore>()((set) => ({
@@ -46,6 +77,8 @@ export const useAppStore = create<AppStore>()((set) => ({
   stateSlots: [],
   idProviders: [],
   userGroups: [],
+  headerConfig: null,
+  navConfig: null,
 
   setApp: (app) => set({ app }),
   setTheme: (theme) => set({ theme }),
@@ -84,4 +117,21 @@ export const useAppStore = create<AppStore>()((set) => ({
 
   setIdProviders: (providers) => set({ idProviders: providers }),
   setUserGroups: (groups) => set({ userGroups: groups }),
+
+  setHeaderConfig: (header) => set({ headerConfig: header }),
+  updateHeaderConfig: (updates) => set(produce<AppStore>(s => {
+    s.headerConfig = { ...(s.headerConfig ?? DEFAULT_HEADER), ...updates }
+  })),
+  setNavConfig: (nav) => set({ navConfig: nav }),
+  updateNavConfig: (updates) => set(produce<AppStore>(s => {
+    s.navConfig = { ...(s.navConfig ?? DEFAULT_NAV), ...updates }
+  })),
+  setNavItems: (items) => set(produce<AppStore>(s => {
+    s.navConfig = { ...(s.navConfig ?? DEFAULT_NAV), items }
+  })),
 }))
+
+// Default exports so consumers (HeaderPropsPanel / NavPropsPanel) can seed
+// the store when the FDE first enables a chrome slot.
+export const DEFAULT_HEADER_CONFIG = DEFAULT_HEADER
+export const DEFAULT_NAV_CONFIG = DEFAULT_NAV

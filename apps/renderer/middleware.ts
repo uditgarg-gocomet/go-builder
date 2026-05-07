@@ -110,10 +110,18 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const loginUrl = new URL(`/${appSlug}/login`, request.url)
   const unauthorizedUrl = new URL(`/${appSlug}/unauthorized`, request.url)
 
+  // Preserve the original URL so the login page can send the user back
+  // after a successful sign-in. Includes pathname + any query string.
+  const originalPath = pathname + (request.nextUrl.search ?? '')
+  const addRedirectTo = (url: URL): URL => {
+    url.searchParams.set('redirectTo', originalPath)
+    return url
+  }
+
   // Extract portal_session cookie
   const token = request.cookies.get('portal_session')?.value
   if (!token) {
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(addRedirectTo(loginUrl))
   }
 
   let payload: PortalToken
@@ -122,7 +130,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const { payload: verified } = await jwtVerify<PortalToken>(token, getJWKS())
     payload = verified
   } catch {
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(addRedirectTo(loginUrl))
   }
 
   // Validate token via Core Backend (includes Redis revocation check)
@@ -136,16 +144,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     })
 
     if (!validateRes.ok) {
-      return NextResponse.redirect(loginUrl)
+      return NextResponse.redirect(addRedirectTo(loginUrl))
     }
 
     const validateData = (await validateRes.json()) as { valid?: boolean }
     if (!validateData.valid) {
-      return NextResponse.redirect(loginUrl)
+      return NextResponse.redirect(addRedirectTo(loginUrl))
     }
   } catch {
     // Fail closed — deny access if Core Backend is unreachable
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(addRedirectTo(loginUrl))
   }
 
   // Check OpenFGA page access if a page slug is present

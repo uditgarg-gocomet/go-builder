@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, type Rea
 import type { BindingContext, PageSchema } from '@portal/core'
 import { DataSourceResolver } from '../data/dataSourceResolver.js'
 import { PollingManager } from '../data/pollingManager.js'
+import { useAuth } from '../auth/authContext.js'
 
 interface BindingContextValue {
   context: BindingContext
@@ -49,6 +50,16 @@ export function BindingProvider({
   appId: _appId,
   children,
 }: BindingProviderProps): React.ReactElement {
+  // Read the current user from AuthContext so any mocked-role override (via
+  // ?role= URL param, see roleFixture.ts) propagates into BindingContext.user.
+  // Falls back to the props passed from the server page component when no
+  // AuthProvider user is available (e.g. SSR-only paths).
+  const { user: authUser } = useAuth()
+
+  const effectiveUserId = authUser?.id ?? userId
+  const effectiveUserEmail = authUser?.email ?? userEmail ?? ''
+  const effectiveUserGroups = authUser?.groups ?? userGroups ?? []
+
   // State slots initialised from schema defaults
   const [stateSlots, setStateSlots] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {}
@@ -68,8 +79,8 @@ export function BindingProvider({
   const context: BindingContext = {
     datasource,
     params: urlParams,
-    user: userId
-      ? { id: userId, email: userEmail ?? '', groups: userGroups ?? [] }
+    user: effectiveUserId
+      ? { id: effectiveUserId, email: effectiveUserEmail, groups: effectiveUserGroups }
       : undefined,
     env: (process.env['NEXT_PUBLIC_APP_ENVIRONMENT'] as 'STAGING' | 'PRODUCTION' | undefined) ?? 'STAGING',
     state: stateSlots,

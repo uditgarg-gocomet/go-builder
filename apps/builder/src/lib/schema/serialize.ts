@@ -12,16 +12,11 @@ function canvasNodeToComponentNode(
     canvasNodeToComponentNode(childId, nodes, childMap)
   )
 
+  // Pass through the entire node and replace only `children`. This is an
+  // allowlist-free copy so any new optional field we add later (e.g. a new
+  // top-level node attribute) is preserved without having to touch this file.
   return {
-    id: node.id,
-    type: node.type,
-    source: node.source,
-    props: node.props,
-    bindings: node.bindings,
-    actions: node.actions,
-    style: node.style,
-    responsive: node.responsive,
-    dataSource: node.dataSource,
+    ...node,
     children,
   }
 }

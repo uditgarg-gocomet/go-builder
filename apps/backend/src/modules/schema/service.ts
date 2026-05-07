@@ -11,6 +11,7 @@ const logger = createChildLogger('schema')
 const CONCURRENT_EDIT_WINDOW_MS = 30_000
 const INITIAL_VERSION = '0.1.0'
 const MAX_SCHEMA_BYTES = 5 * 1024 * 1024 // 5MB
+const DRAFT_SNAPSHOT_LIMIT = 50 // rolling cap per page
 
 // ── Registry validation ────────────────────────────────────────────────────────
 
@@ -119,6 +120,16 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     },
   })
 
+  // Snapshot the *previous* draft state before it's overwritten (if there was
+  // one). This gives us a rolling last-N-edits audit trail we can revert to
+  // when an accidental save blows away good content. Fire-and-forget — a
+  // snapshot-insert failure must not fail the save.
+  if (latestVersion && latestVersion.status === 'DRAFT') {
+    void recordDraftSnapshot(pageId, latestVersion.schema, latestVersion.createdBy).catch(err => {
+      logger.warn({ err, pageId }, 'Failed to record draft snapshot')
+    })
+  }
+
   return {
     version: {
       id: newVersion.id,
@@ -128,6 +139,120 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     },
     concurrentEditWarning,
   }
+}
+
+// ── Draft snapshot history ────────────────────────────────────────────────────
+// Captures the draft schema *before* it's overwritten by a subsequent save,
+// so users can revert to prior states. Dedupes by content hash — identical
+// saves don't bloat the history. Rolling cap at DRAFT_SNAPSHOT_LIMIT per page.
+
+function hashSchema(schema: unknown): string {
+  const json = JSON.stringify(schema)
+  return crypto.createHash('sha256').update(json).digest('hex')
+}
+
+function countNodes(layout: unknown): number {
+  if (!layout || typeof layout !== 'object') return 0
+  const node = layout as { children?: unknown[] }
+  let n = 1
+  for (const child of node.children ?? []) {
+    n += countNodes(child)
+  }
+  return n
+}
+
+async function recordDraftSnapshot(
+  pageId: string,
+  schema: unknown,
+  createdBy: string,
+  label?: string,
+): Promise<void> {
+  const hash = hashSchema(schema)
+
+  // Dedupe: skip if the most recent snapshot already has this exact content.
+  const last = await db.draftSnapshot.findFirst({
+    where: { pageId },
+    orderBy: { createdAt: 'desc' },
+    select: { schemaHash: true },
+  })
+  if (last?.schemaHash === hash) return
+
+  const json = JSON.stringify(schema)
+  const layout = (schema as { layout?: unknown } | null | undefined)?.layout
+  await db.draftSnapshot.create({
+    data: {
+      pageId,
+      schema: schema as Prisma.InputJsonValue,
+      schemaHash: hash,
+      nodeCount: countNodes(layout),
+      size: Buffer.byteLength(json, 'utf8'),
+      label: label ?? null,
+      createdBy,
+    },
+  })
+
+  // Enforce rolling cap — delete oldest beyond DRAFT_SNAPSHOT_LIMIT.
+  const total = await db.draftSnapshot.count({ where: { pageId } })
+  if (total > DRAFT_SNAPSHOT_LIMIT) {
+    const excess = total - DRAFT_SNAPSHOT_LIMIT
+    const toDelete = await db.draftSnapshot.findMany({
+      where: { pageId },
+      orderBy: { createdAt: 'asc' },
+      take: excess,
+      select: { id: true },
+    })
+    if (toDelete.length > 0) {
+      await db.draftSnapshot.deleteMany({
+        where: { id: { in: toDelete.map(s => s.id) } },
+      })
+    }
+  }
+}
+
+export interface DraftSnapshotSummary {
+  id: string
+  nodeCount: number
+  size: number
+  label: string | null
+  createdBy: string
+  createdAt: Date
+}
+
+export async function listDraftSnapshots(pageId: string): Promise<DraftSnapshotSummary[]> {
+  const page = await db.page.findUnique({ where: { id: pageId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const snapshots = await db.draftSnapshot.findMany({
+    where: { pageId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, nodeCount: true, size: true, label: true, createdBy: true, createdAt: true },
+  })
+  return snapshots
+}
+
+export async function restoreDraftSnapshot(
+  pageId: string,
+  snapshotId: string,
+  restoredBy: string,
+): Promise<SaveDraftResult> {
+  const page = await db.page.findUnique({ where: { id: pageId } })
+  if (!page) throw Object.assign(new Error('Page not found'), { statusCode: 404 })
+
+  const snapshot = await db.draftSnapshot.findUnique({ where: { id: snapshotId } })
+  if (!snapshot) throw Object.assign(new Error('Snapshot not found'), { statusCode: 404 })
+  if (snapshot.pageId !== pageId) {
+    throw Object.assign(new Error('Snapshot does not belong to this page'), { statusCode: 400 })
+  }
+
+  // Route back through saveDraft so all the usual machinery runs — registry
+  // validation, pre-overwrite snapshot of the current draft, diff computation,
+  // etc. This means restoring itself captures a snapshot of whatever was
+  // there, so a restore can always be undone.
+  return saveDraft({
+    pageId,
+    schema: snapshot.schema as unknown as SaveDraftRequest['schema'],
+    savedBy: restoredBy,
+  })
 }
 
 // ── getDraft ──────────────────────────────────────────────────────────────────
@@ -227,14 +352,37 @@ async function _promote(
     },
   })
 
-  // Fire build webhook and update to BUILDING
+  // Fire build webhook and update to BUILDING, then SUCCESS.
+  //
+  // POC note: the Renderer in this POC reads schemas at request time with
+  // `cache: 'no-store'` (see apps/renderer/src/app/[appSlug]/[pageSlug]/page.tsx),
+  // so there is no actual CI build to wait for. The build webhook in this POC
+  // only triggers an on-demand revalidation of static paths — it completes
+  // quickly and doesn't call back to the backend to report status.
+  //
+  // The deployment query used by the Renderer (`getDeployment`) requires
+  // `buildStatus = 'SUCCESS'`. If we leave deployments stuck at BUILDING, the
+  // Renderer gets a 404 for every newly-promoted app. We therefore transition
+  // PENDING → BUILDING → SUCCESS right after the webhook returns.
+  //
+  // Post-POC, when CI actually builds per-tenant Docker images, the status
+  // should only become SUCCESS when the webhook receiver (or CI itself) calls
+  // `PATCH /apps/deployments/:id/status` to report a completed build.
   triggerBuild(versionId, environment, deployment.id).then(async () => {
     await db.deployment.update({
       where: { id: deployment.id },
       data: { buildStatus: 'BUILDING' },
     })
-  }).catch(err => {
+    await db.deployment.update({
+      where: { id: deployment.id },
+      data: { buildStatus: 'SUCCESS' },
+    })
+  }).catch(async err => {
     logger.error({ err, deploymentId: deployment.id }, 'Build webhook failed')
+    await db.deployment.update({
+      where: { id: deployment.id },
+      data: { buildStatus: 'FAILED' },
+    }).catch(() => undefined)
   })
 
   return { deploymentId: deployment.id, version: bumped }

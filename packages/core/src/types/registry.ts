@@ -5,12 +5,41 @@ export const RegistryScopeSchema = z.enum(['COMMON', 'TENANT_LOCAL'])
 export const EntryStatusSchema = z.enum(['ACTIVE', 'DEPRECATED', 'PENDING_REVIEW', 'REJECTED'])
 export const SourceTypeSchema = z.enum(['INTERNAL', 'EXTERNAL_PLATFORM', 'COMPOSED'])
 
+// ── Permissions (widget permission hook) ──────────────────────────────────────
+// Declared on the widget version itself — read at render time by the widget
+// implementation (and/or the renderer guard) to decide per-field edit vs view
+// and whether a given action is enabled for the current user's groups.
+//
+// Example:
+//   {
+//     fields:  { "netWeight": { editFor: ["ops_admin"], viewFor: ["ops_viewer"] } },
+//     actions: { "approve":   { enabledFor: ["ops_admin"] } }
+//   }
+export const FieldPermissionSchema = z.object({
+  editFor: z.array(z.string()).optional(),
+  viewFor: z.array(z.string()).optional(),
+})
+
+export const ActionPermissionSchema = z.object({
+  enabledFor: z.array(z.string()).optional(),
+})
+
+export const WidgetPermissionsSchema = z.object({
+  fields: z.record(z.string(), FieldPermissionSchema).optional(),
+  actions: z.record(z.string(), ActionPermissionSchema).optional(),
+})
+
+export type FieldPermission = z.infer<typeof FieldPermissionSchema>
+export type ActionPermission = z.infer<typeof ActionPermissionSchema>
+export type WidgetPermissions = z.infer<typeof WidgetPermissionsSchema>
+
 export const ComponentManifestSchema = z.object({
   displayName: z.string(),
   category: z.string(),
   description: z.string(),
   icon: z.string().optional(),
   tags: z.array(z.string()),
+  permissions: WidgetPermissionsSchema.optional(),
 })
 
 export const RegistryEntryVersionSchema = z.object({
@@ -31,6 +60,7 @@ export const RegistryEntryVersionSchema = z.object({
   changelog: z.string().optional(),
   publishedAt: z.coerce.date(),
   publishedBy: z.string(),
+  permissions: WidgetPermissionsSchema.optional(),
 })
 
 export const RegistryEntrySchema = z.object({

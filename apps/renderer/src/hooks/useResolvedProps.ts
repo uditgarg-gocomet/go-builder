@@ -34,14 +34,21 @@ export function useResolvedProps(node: ComponentNode): Record<string, unknown> {
   }, [node.props, node.bindings, node.style, responsiveOverrides, context])
 }
 
-export function useResolvedActions(node: ComponentNode): Record<string, () => void> {
+export function useResolvedActions(node: ComponentNode): Record<string, (...args: unknown[]) => void> {
   const { execute } = useActionContext()
 
   return useMemo(() => {
-    const handlers: Record<string, () => void> = {}
+    const handlers: Record<string, (...args: unknown[]) => void> = {}
     for (const binding of node.actions) {
-      handlers[binding.trigger] = () => {
-        void execute(binding.actionId, binding.params as Record<string, unknown> | undefined)
+      // Forward the first argument the component passes to the trigger
+      // callback (e.g. `row` from DataTable.onRowClick) as triggerArgs so
+      // action configs can interpolate `{{event.<field>}}`.
+      handlers[binding.trigger] = (...args: unknown[]) => {
+        void execute(
+          binding.actionId,
+          binding.params as Record<string, unknown> | undefined,
+          args[0],
+        )
       }
     }
     return handlers
