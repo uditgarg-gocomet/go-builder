@@ -1,0 +1,1063 @@
+{
+  "id": "722c1fb4-a01a-4526-a659-efbec5236c0c",
+  "type": "Stack",
+  "source": "primitive",
+  "props": {
+    "direction": "horizontal",
+    "gap": "none",
+    "align": "stretch",
+    "className": "min-h-screen bg-background"
+  },
+  "bindings": {},
+  "style": {},
+  "responsive": {},
+  "children": [
+    {
+      "id": "563cac2d-ef69-46d2-af26-073c25400d83",
+      "type": "Stack",
+      "source": "primitive",
+      "props": {
+        "direction": "vertical",
+        "gap": "sm",
+        "className": "w-64 shrink-0 border-r border-border bg-card p-4"
+      },
+      "bindings": {},
+      "style": {},
+      "responsive": {},
+      "children": [
+        {
+          "id": "bb458937-aac9-4baa-93e6-7e169869b880",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "59569a03-b27c-4826-a083-3b1a514eaba4",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Quick Filters",
+                "as": "p",
+                "size": "sm",
+                "weight": "semibold"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "1cc98577-2237-4fd5-8076-e323dbfca8ab",
+              "type": "IconButton",
+              "source": "primitive",
+              "props": {
+                "icon": "chevron-left",
+                "variant": "ghost",
+                "size": "sm",
+                "ariaLabel": "Collapse"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ea57f8c6-0d4a-48d9-aa1b-224ec14caba9",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "gap": "xs",
+            "align": "center"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "d5d107f8-6ea9-47a5-8030-1d10891d5bda",
+              "type": "Button",
+              "source": "primitive",
+              "props": {
+                "label": "All Shipments",
+                "variant": "default",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "33b3ba9d-08ed-4c8e-a440-f05be721d09d",
+              "type": "Button",
+              "source": "primitive",
+              "props": {
+                "label": "My Shipments",
+                "variant": "outline",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [],
+              "visibility": {
+                "requireGroups": [
+                  "ops_admin"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "af6edf23-3392-4965-992c-fbbc63f65716",
+          "type": "Divider",
+          "source": "primitive",
+          "props": {
+            "orientation": "horizontal"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "9b9dc46a-978a-46bb-bc74-f07097c6d24a",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "content": "ALERTS",
+            "as": "p",
+            "size": "xs",
+            "muted": true,
+            "className": "font-semibold tracking-wider uppercase"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "d30eda45-dcdc-46f5-ba57-e50adc33bf87",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "f0152613-6beb-4790-903d-5a2ef541dba4",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "UAPL Invoice Errors",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "61863ce2-fdc0-494a-b965-5f1720b3435d",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "11",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "b1054b78-0196-44cd-ac9c-4dd8f8648c19",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "7126f504-0e28-4c13-881a-85f6d8a3781a",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Documents Pending",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "bd48901f-db5d-4532-84ec-b4140df74ca6",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "364",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "8bd5aa5c-5596-4020-9655-3dbeb07120fc",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "28026892-1c31-4892-9e93-406e6512296c",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Extraction Missing",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "bcdab325-1ffc-45c3-a591-2a4f616ca4c1",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "10",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "95038b85-1358-4b2a-ac81-7b56dbcd679e",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "4f597214-24a2-4093-9563-84ac2a7140da",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Validation Errors",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "98ddf179-91d2-47c8-8822-4e60c2f73aa6",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "11",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "2c3e0b7e-fd39-40dd-b395-604eb18c8ab6",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "c517eb19-807b-47c6-8393-1c98cd55b3b8",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Track & Trace Missing",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "38eabdfd-67e9-4e8f-9017-4571a67764b7",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "7",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "34513399-0fe0-4f44-83ad-f97721168047",
+          "type": "Divider",
+          "source": "primitive",
+          "props": {
+            "orientation": "horizontal"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "23a99b84-c168-490f-a5f4-7cc1df79564c",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "content": "BOOKINGS",
+            "as": "p",
+            "size": "xs",
+            "muted": true,
+            "className": "font-semibold tracking-wider uppercase"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "9090590f-0b40-4a66-bf25-78b220f882a2",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "cf6b59cd-43ec-4442-8280-e3d499ea26eb",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Created From Dispatch",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "cd12da63-0985-470e-baac-4932d5ae6954",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "378",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "40d5095a-11da-47e2-a028-f2eea0a6cb0f",
+          "type": "Divider",
+          "source": "primitive",
+          "props": {
+            "orientation": "horizontal"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "650d0bef-c777-4b0c-8afa-23b56aafaa89",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "content": "DOCUMENTS",
+            "as": "p",
+            "size": "xs",
+            "muted": true,
+            "className": "font-semibold tracking-wider uppercase"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "373594df-b801-465d-ba92-602429f41a44",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "2c6c3af2-49cb-4019-9225-54913809860b",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Documents Pending",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "05530feb-c765-465d-8fc6-f30093acabd2",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "364",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "cdc7b6f4-a820-4908-8ce8-3dcec75c8d23",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "0ae16a92-12d2-4c8e-93a6-3bcf1a9b4b1e",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Extraction Pending",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "3f652403-ad61-4eb6-a99d-5ddad6e50003",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "10",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "dcde83fa-9b61-4386-955f-aba5be44f6eb",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "921ba569-3bc6-4df6-bf90-ecd90789226e",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Validation Pending",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "bb4cc087-adfd-454c-8173-f4a00c9a6830",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "11",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "2bbab3cd-48f9-4917-898d-38a2d60df735",
+          "type": "Divider",
+          "source": "primitive",
+          "props": {
+            "orientation": "horizontal"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "ab58dec6-dba3-4373-a563-f27393d3df41",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "content": "ALL SHIPMENTS",
+            "as": "p",
+            "size": "xs",
+            "muted": true,
+            "className": "font-semibold tracking-wider uppercase"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "241bd3b3-2bb9-4d49-bf4f-e23ab889bf78",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "bc33d52c-cdd3-4f44-ab36-6d24c388fbb4",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Open Shipments",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "51e94518-90c1-4dc5-98bb-5568848ba0f5",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "364",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "cf631b40-083f-4971-8dd8-be6c980648db",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "98ce078c-06a5-459e-a6eb-bf7ab93f1e1f",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Short Shipments",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "e46878ed-bab7-408f-880c-16b364119675",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "120",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "2d9f3b42-3243-4207-a0f4-42ae9987e4fe",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "618f522c-a261-442f-a71b-2d451a300cfc",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "Long Shipments",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "20c0b14a-d4bb-465d-97d4-45f1b8b717c0",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "244",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ae758a9a-0168-4e75-874f-1824a522214f",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "67c1257d-7c8c-4c16-ade5-3eb9d2875a97",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "All Shipments",
+                "as": "p",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "4c0d193f-a31d-45c2-81ca-c21f00d77f71",
+              "type": "Badge",
+              "source": "primitive",
+              "props": {
+                "label": "378",
+                "variant": "default"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "db966723-13b4-4e33-b9d0-c5c2413b7857",
+      "type": "Stack",
+      "source": "primitive",
+      "props": {
+        "direction": "vertical",
+        "gap": "none",
+        "className": "flex-1 overflow-hidden p-4"
+      },
+      "bindings": {},
+      "style": {},
+      "responsive": {},
+      "children": [
+        {
+          "id": "f3ebc054-8496-411d-ae4c-5162be604cdc",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "as": "p",
+            "size": "sm",
+            "muted": true,
+            "content": ""
+          },
+          "bindings": {
+            "content": "Filter: {{params.filter}}"
+          },
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "c5d72aa3-9435-4992-9e1b-fc484ceb67d3",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "justify": "between",
+            "align": "center",
+            "gap": "sm",
+            "className": "mb-4"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "ddb2c666-9102-40bf-bab0-ccc80e167e86",
+              "type": "Stack",
+              "source": "primitive",
+              "props": {
+                "direction": "horizontal",
+                "gap": "sm",
+                "align": "center"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "a26f40ab-da21-4fce-8abc-e367cec90557",
+                  "type": "IconButton",
+                  "source": "primitive",
+                  "props": {
+                    "icon": "grid",
+                    "variant": "ghost",
+                    "size": "sm",
+                    "ariaLabel": "View switch"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                },
+                {
+                  "id": "db1ee04d-58ba-4a04-8d52-eea771fe2bad",
+                  "type": "Heading",
+                  "source": "primitive",
+                  "props": {
+                    "text": "Bookings Confirmed",
+                    "level": "h2",
+                    "size": "lg",
+                    "weight": "semibold"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                },
+                {
+                  "id": "eca9022d-f062-4638-80f1-55cbc1d31336",
+                  "type": "IconButton",
+                  "source": "primitive",
+                  "props": {
+                    "icon": "chevron-down",
+                    "variant": "ghost",
+                    "size": "sm",
+                    "ariaLabel": "Change view"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "6b851c2e-e5f4-4a6c-9d4f-c7a2d47ad86f",
+              "type": "Stack",
+              "source": "primitive",
+              "props": {
+                "direction": "horizontal",
+                "gap": "sm",
+                "align": "center"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "5ed1aa63-199b-44b6-9b3e-dcfa7a7b0a9a",
+                  "type": "Button",
+                  "source": "primitive",
+                  "props": {
+                    "label": "Filters",
+                    "variant": "outline",
+                    "size": "sm"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                },
+                {
+                  "id": "30978235-b4ea-4b23-bc9f-d722d878f610",
+                  "type": "Select",
+                  "source": "primitive",
+                  "props": {
+                    "placeholder": "Last 3 months",
+                    "options": [
+                      {
+                        "value": "3m",
+                        "label": "Last 3 months"
+                      },
+                      {
+                        "value": "6m",
+                        "label": "Last 6 months"
+                      },
+                      {
+                        "value": "1y",
+                        "label": "Last year"
+                      },
+                      {
+                        "value": "all",
+                        "label": "All time"
+                      }
+                    ]
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                },
+                {
+                  "id": "dabb2be9-9d79-4f3d-b2a6-20a86a000948",
+                  "type": "Button",
+                  "source": "primitive",
+                  "props": {
+                    "label": "\u2193 Download Excel",
+                    "variant": "outline",
+                    "size": "sm"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2cf3f26a-7de5-4203-925e-4bc8ab180dd2",
+          "type": "DataTable",
+          "source": "primitive",
+          "props": {
+            "columns": [
+              {
+                "key": "shipmentId",
+                "label": "Shipment ID",
+                "sortable": true
+              },
+              {
+                "key": "shipmentType",
+                "label": "Shipment Type",
+                "sortable": false
+              },
+              {
+                "key": "shipmentStatus",
+                "label": "Shipment Status",
+                "sortable": true
+              },
+              {
+                "key": "suName",
+                "label": "SU Name",
+                "sortable": false
+              },
+              {
+                "key": "soldToName",
+                "label": "Sold To Name",
+                "sortable": true
+              },
+              {
+                "key": "shipToName",
+                "label": "Ship To Name",
+                "sortable": true
+              },
+              {
+                "key": "mode",
+                "label": "Mode",
+                "sortable": true
+              },
+              {
+                "key": "blNumber",
+                "label": "BL Number",
+                "sortable": false
+              },
+              {
+                "key": "carrier",
+                "label": "Carrier",
+                "sortable": true
+              },
+              {
+                "key": "polName",
+                "label": "POL Name",
+                "sortable": true
+              }
+            ],
+            "pageSize": 50,
+            "striped": false,
+            "searchable": true,
+            "exportable": true,
+            "title": ""
+          },
+          "bindings": {},
+          "style": {
+            "flex": 1
+          },
+          "responsive": {},
+          "children": [],
+          "dataSource": {
+            "alias": "shipments"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1065 @@
+{
+  "id": "49072aca-9e43-40c1-9d1a-f4ca2834081b",
+  "type": "Stack",
+  "source": "primitive",
+  "props": {
+    "direction": "vertical",
+    "gap": "none",
+    "className": "min-h-screen bg-background p-6"
+  },
+  "bindings": {},
+  "style": {},
+  "responsive": {},
+  "children": [
+    {
+      "id": "4fb9e909-d980-4ba4-bb27-018314149e72",
+      "type": "Stack",
+      "source": "primitive",
+      "props": {
+        "direction": "horizontal",
+        "justify": "between",
+        "align": "center",
+        "gap": "sm",
+        "className": "mb-4"
+      },
+      "bindings": {},
+      "style": {},
+      "responsive": {},
+      "children": [
+        {
+          "id": "5fe6b2b3-a1ff-45a2-a917-91fa1a5d82b5",
+          "type": "Text",
+          "source": "primitive",
+          "props": {
+            "content": "Click on the buttons to see the details",
+            "as": "p",
+            "size": "sm",
+            "muted": true
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": []
+        },
+        {
+          "id": "74003c96-6a84-4562-ae9c-7c5fbf21df90",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "horizontal",
+            "gap": "xs",
+            "align": "center"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "c8349761-7b19-47f0-8946-9e14b2debab1",
+              "type": "Button",
+              "source": "primitive",
+              "props": {
+                "label": "All Shipments",
+                "variant": "default",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "1bcdf9c7-44e9-4415-84f1-2812504f3880",
+              "type": "Button",
+              "source": "primitive",
+              "props": {
+                "label": "My Shipments",
+                "variant": "outline",
+                "size": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [],
+              "visibility": {
+                "requireGroups": [
+                  "ops_admin"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ebb3f626-5c8c-4f0d-a591-d1775d7b086e",
+      "type": "Stack",
+      "source": "primitive",
+      "props": {
+        "direction": "vertical",
+        "gap": "lg"
+      },
+      "bindings": {},
+      "style": {},
+      "responsive": {},
+      "children": [
+        {
+          "id": "7f606be6-aa24-49e5-87dd-9ce5168b9243",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "vertical",
+            "gap": "sm"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "9e80b07b-28aa-42fd-8093-3c443431ef5b",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "01 ALERTS",
+                "as": "p",
+                "size": "xs",
+                "muted": true,
+                "className": "font-semibold tracking-wider uppercase"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "6838e9fa-4e4f-4e47-932c-7faf8159bcb6",
+              "type": "Grid",
+              "source": "primitive",
+              "props": {
+                "columns": 5,
+                "gap": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "b5d85ee8-adad-4c50-ac68-c49829a4b8c3",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "6d83793e-bb2f-49c9-8fb8-6581d448f762",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "026940f1-4128-4551-b9b3-9e79c1a91b26",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "11",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "4c81fee6-bd65-4b1b-9ddc-53ee3b1ab423",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "UAPL Invoice Errors",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "012677a7-4599-436a-a6f9-56a2608920c7",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "db97eea7-9e2d-48f4-841b-d3762ce44316",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "bf4cb1c0-d039-4639-a34f-c9285ddf4c8c",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "364",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "b3eb0ec9-15dd-44a7-a584-863b183e54f7",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Documents Pending",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "2413b280-c0a9-4f5a-aef8-75c4d15af23f",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "7f51de17-b77e-4cdb-a020-5160ee55794b",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "c46c5630-1037-4e8e-b4fe-7b72291d9422",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "10",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "e162ce55-fa4d-4b86-840f-19febc3737e8",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Extraction Missing",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "8abd236a-9948-4f60-b23b-8144cd747c72",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "38ed1ed8-a4a9-43d3-86ad-a174b033a5bf",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "7fe83249-98a5-49c4-b0fd-688b23de2c12",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "11",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "9bdf1da1-7759-4bbb-9468-27debcc88b78",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Validation Errors",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "ebef39ba-141e-4c4a-a319-245c914a9b87",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "82d714cb-1a8e-4128-9e16-7d952314ebec",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "807d5ade-7320-4500-89f7-e450e490680d",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "7",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "b0e43dec-fe67-44d5-84a9-7a6596c7e045",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Track & Trace Missing",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1037701b-3f19-4620-b09d-818f612c4090",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "vertical",
+            "gap": "sm"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "2d2c6ad0-0716-4ed3-a19b-bf5578a69f4d",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "02 BOOKINGS",
+                "as": "p",
+                "size": "xs",
+                "muted": true,
+                "className": "font-semibold tracking-wider uppercase"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "4b5da221-2dd8-41dd-a9d7-fa3479bdeba4",
+              "type": "Grid",
+              "source": "primitive",
+              "props": {
+                "columns": 5,
+                "gap": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "92aa3f26-0891-4a49-9ed2-0f194ed3cd1f",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "5859da77-7ab0-400d-9c4c-23b1d87070fd",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "810c1748-0044-4b4e-b598-2648c67b59ff",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "378",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "4036923b-d59f-43e2-80d1-347e30796764",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Created From Dispatch",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "60170a22-b8a1-49f2-8196-4c0ddc590f32",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "vertical",
+            "gap": "sm"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "1a894662-43a3-43d1-afdf-bbb4f7c83dc2",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "03 DOCUMENTS",
+                "as": "p",
+                "size": "xs",
+                "muted": true,
+                "className": "font-semibold tracking-wider uppercase"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "384e9567-0721-4d04-9ba5-a0debb755494",
+              "type": "Grid",
+              "source": "primitive",
+              "props": {
+                "columns": 5,
+                "gap": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "ff9a1cd9-f46b-4a8d-8252-e9cdf4da7374",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "87998863-bc01-460a-9fb2-7f10f802e1bc",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "36162904-2ada-4693-9f9f-c05a43dd1386",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "364",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "8d0923cd-8d9a-4f94-9624-ceda5f1a339c",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Documents Pending",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "dbca7ec2-6af2-41ac-86cf-4334f99958c1",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "ede8a8a0-eb2c-4862-a273-8f3ef9d87134",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "37802cf5-8d67-450a-b903-92145cdeae88",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "10",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "891f8262-ba1b-4fad-8846-7f587f6a611b",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Extraction Pending",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "82928801-d296-4b36-a023-a14a08f79f18",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "3d88ed8e-3b72-4ccd-9736-89f747b4f281",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "6ddc9584-6b34-45b7-9036-ca8e7e5b4fa3",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "11",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "866f822e-d25b-4d50-b2f5-a136c1ad866d",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Validation Pending",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6ffc88a7-2839-45b0-9ec3-df24cdbb371f",
+          "type": "Stack",
+          "source": "primitive",
+          "props": {
+            "direction": "vertical",
+            "gap": "sm"
+          },
+          "bindings": {},
+          "style": {},
+          "responsive": {},
+          "children": [
+            {
+              "id": "ce083923-aac2-4b6e-946b-04a6713957d6",
+              "type": "Text",
+              "source": "primitive",
+              "props": {
+                "content": "04 ALL SHIPMENTS",
+                "as": "p",
+                "size": "xs",
+                "muted": true,
+                "className": "font-semibold tracking-wider uppercase"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": []
+            },
+            {
+              "id": "d57a0afc-9d9d-49be-ad7d-fa426ea5b9f9",
+              "type": "Grid",
+              "source": "primitive",
+              "props": {
+                "columns": 5,
+                "gap": "sm"
+              },
+              "bindings": {},
+              "style": {},
+              "responsive": {},
+              "children": [
+                {
+                  "id": "a826e832-1c0e-40e3-837e-540b2fea29e4",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "1f41d9e7-a774-4957-b65f-08df6d1317f4",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "d040eb19-0585-4569-a33d-55def1b3ac7e",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "364",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "928fdcb3-8ce7-49c3-8ab3-7614c154dc4e",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Open Shipments",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "a2b92036-47d3-46fc-a8e0-cb4f542c66b5",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "5763a159-7d63-4fd4-b2db-7e47781865cf",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "c79cfe15-65f5-4608-a2d8-20106b543038",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "120",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "3b2216fa-3b07-4187-bc0c-31e23e6ddd97",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Short Shipments",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "67609014-fe86-4fb1-aa78-e6c2766d6a5b",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "dbbe8c57-620d-4b5e-ab8b-a449509b216b",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "ad73bd6b-a8d4-487c-8b73-17779f521b9a",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "244",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "9ca28cb3-a4e2-4ab8-9217-1f7c23e52f42",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "Long Shipments",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "345a6d48-da07-4ce2-a9f1-f39f403cfca6",
+                  "type": "Card",
+                  "source": "primitive",
+                  "props": {
+                    "padding": "md",
+                    "rounded": "md",
+                    "shadow": "sm",
+                    "className": "cursor-pointer hover:shadow-md transition-shadow"
+                  },
+                  "bindings": {},
+                  "style": {},
+                  "responsive": {},
+                  "children": [
+                    {
+                      "id": "217047ae-bd87-42fe-b534-64b62bc90cce",
+                      "type": "Stack",
+                      "source": "primitive",
+                      "props": {
+                        "direction": "vertical",
+                        "gap": "xs"
+                      },
+                      "bindings": {},
+                      "style": {},
+                      "responsive": {},
+                      "children": [
+                        {
+                          "id": "08ea5e65-c57d-4711-bb29-55ef6b39479e",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "378",
+                            "as": "p",
+                            "size": "2xl",
+                            "weight": "bold"
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        },
+                        {
+                          "id": "10e74b50-2c74-40ca-b584-0dd1b76feb4f",
+                          "type": "Text",
+                          "source": "primitive",
+                          "props": {
+                            "content": "All Shipments",
+                            "as": "p",
+                            "size": "sm",
+                            "muted": true
+                          },
+                          "bindings": {},
+                          "style": {},
+                          "responsive": {},
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

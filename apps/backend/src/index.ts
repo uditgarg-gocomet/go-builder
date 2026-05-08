@@ -17,6 +17,7 @@ import { connectorRouter } from './modules/connector/router.js'
 import { authRouter } from './modules/auth/router.js'
 import { assetsRouter } from './modules/assets/router.js'
 import { actionLogsRouter } from './modules/action-logs/router.js'
+import { mockDataRouter } from './modules/mock-data/router.js'
 
 initSentry()
 
@@ -86,6 +87,7 @@ await fastify.register(endpointRegistryRouter, { prefix: '/endpoints' })
 await fastify.register(connectorRouter, { prefix: '/connector' })
 await fastify.register(assetsRouter, { prefix: '/assets' })
 await fastify.register(actionLogsRouter, { prefix: '/action-logs' })
+await fastify.register(mockDataRouter, { prefix: '/mock' })
 
 // ── Health check ───────────────────────────────────────────────────────────────
 

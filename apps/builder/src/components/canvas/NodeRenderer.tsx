@@ -59,6 +59,12 @@ function NodeRendererImpl({ nodeId, depth = 0 }: NodeRendererProps): React.React
         />
       )
     } else {
+      // Populated container: render children, then a slim "append" drop strip.
+      // We deliberately drop the "+ drop here" text — it cluttered the canvas
+      // and duplicated information now communicated by the canvas-surface
+      // fallback droppable. The strip itself is preserved (with no label) so
+      // appending into a *nested* container at the end still works; dropping
+      // on the canvas surface only appends to the root.
       innerChildren = (
         <>
           {childIds.map(childId => (
@@ -68,8 +74,8 @@ function NodeRendererImpl({ nodeId, depth = 0 }: NodeRendererProps): React.React
             id={`append-${nodeId}`}
             parentId={nodeId}
             position={childIds.length}
-            label="+ drop here"
-            className="mx-2 mb-1 min-h-[32px] opacity-40 hover:opacity-100 transition-opacity"
+            label=""
+            className="mx-2 mb-1 min-h-[12px] !border-primary/30 !bg-transparent hover:!border-primary hover:!bg-primary/5"
           />
         </>
       )

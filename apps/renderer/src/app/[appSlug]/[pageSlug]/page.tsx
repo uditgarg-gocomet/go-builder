@@ -68,10 +68,16 @@ export async function generateStaticParams(): Promise<Array<{ appSlug: string; p
 
 interface PageProps {
   params: Promise<{ appSlug: string; pageSlug: string }>
+  // Next.js 15 delivers searchParams as a Promise of `string | string[] | undefined`
+  // values. We need them so URL query strings (e.g. `?id=ABC`) flow into the
+  // BindingContext as `params.id`, which schema bindings like
+  // `{{params.id}}` (used by every detail-page data source) depend on.
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function PortalPage({ params }: PageProps): Promise<React.ReactElement> {
+export default async function PortalPage({ params, searchParams }: PageProps): Promise<React.ReactElement> {
   const { appSlug, pageSlug } = await params
+  const queryParams = await searchParams
 
   // Fetch deployment data
   const data = await fetchDeployment(appSlug)
@@ -102,21 +108,20 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
   const userGroups = userGroupsRaw ? userGroupsRaw.split(',').filter(Boolean) : []
   const token = headerStore.get('x-portal-token') ?? undefined
 
-  // ── DEBUG — temporary diagnostic, remove after verifying middleware headers
-  if (process.env['NODE_ENV'] !== 'production') {
-    // eslint-disable-next-line no-console
-    console.log('[renderer page]', {
-      userId,
-      userEmail,
-      userGroups,
-      tokenLen: token?.length,
-    })
-  }
-
-  // URL params from the page route (for binding resolution)
+  // URL params from the page route + query string (for binding resolution).
+  // Query-string values are flattened — array values (e.g. `?tag=a&tag=b`)
+  // collapse to the first one to keep the BindingContext shape `string` only.
+  // Schema bindings like `{{params.id}}` read from this object.
   const urlParams: Record<string, string> = {
     appSlug,
     pageSlug,
+  }
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (typeof value === 'string') {
+      urlParams[key] = value
+    } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+      urlParams[key] = value[0]
+    }
   }
 
   const themeTokens = schema.theme?.tokens

@@ -6,6 +6,7 @@ const BACKEND_URL = process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:
 const APP_ENVIRONMENT = (process.env['NEXT_PUBLIC_APP_ENVIRONMENT'] ?? 'STAGING').toLowerCase() as 'staging' | 'production'
 
 export type UpdateCallback = (alias: string, data: unknown) => void
+export type LoadingCallback = (alias: string, loading: boolean) => void
 
 export class DataSourceResolver {
   resolvedData: Record<string, unknown> = {}
@@ -13,11 +14,20 @@ export class DataSourceResolver {
   errorState: Record<string, Error> = {}
 
   private sessionToken: string
+  private appId: string
   private onUpdate: UpdateCallback
+  private onLoadingChange: LoadingCallback | undefined
 
-  constructor(sessionToken: string, onUpdate: UpdateCallback) {
+  constructor(
+    sessionToken: string,
+    appId: string,
+    onUpdate: UpdateCallback,
+    onLoadingChange?: LoadingCallback,
+  ) {
     this.sessionToken = sessionToken
+    this.appId = appId
     this.onUpdate = onUpdate
+    this.onLoadingChange = onLoadingChange
   }
 
   // ── Topological sort + batch resolve ────────────────────────────────────────
@@ -58,6 +68,7 @@ export class DataSourceResolver {
     }
 
     this.loadingState[source.alias] = true
+    this.onLoadingChange?.(source.alias, true)
     delete this.errorState[source.alias]
 
     // Build a partial BindingContext using current resolved data + url params
@@ -99,11 +110,13 @@ export class DataSourceResolver {
 
       this.resolvedData[source.alias] = data
       this.loadingState[source.alias] = false
+      this.onLoadingChange?.(source.alias, false)
       this.onUpdate(source.alias, data)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       this.errorState[source.alias] = error
       this.loadingState[source.alias] = false
+      this.onLoadingChange?.(source.alias, false)
 
       const strategy = source.errorHandling?.strategy ?? 'show-error'
       if (strategy === 'use-fallback' && source.errorHandling?.fallback !== undefined) {
@@ -126,7 +139,11 @@ export class DataSourceResolver {
       body?: unknown
     },
   ): Promise<unknown> {
+    // `appId` is required by the connector router's request schema — it scopes
+    // audit logs and rate-limit buckets to the app that issued the call.
+    // Without it the backend rejects with `Validation error: appId Required`.
     const payload: Record<string, unknown> = {
+      appId: this.appId,
       environment: APP_ENVIRONMENT,
       pathParams: overrides.pathParams,
       queryParams: overrides.queryParams,

@@ -40,7 +40,7 @@ export interface NodeRendererProps {
 }
 
 export function NodeRenderer({ node }: NodeRendererProps): React.ReactElement | null {
-  const { context } = useBindingContext()
+  const { context, loadingDatasource } = useBindingContext()
   const userGroups = context.user?.groups ?? []
 
   // Hooks must run unconditionally (React rules of hooks). We always call
@@ -59,9 +59,17 @@ export function NodeRenderer({ node }: NodeRendererProps): React.ReactElement | 
   // Chart) read this directly; widgets that follow the same convention get
   // it too. Bindings in `node.bindings` still win (last-write wins in the
   // merge below) so FDEs can override with a custom expression if they need.
+  // ── dataSource → `data` + `loading` props ──────────────────────────────────
+  // When a data source is in flight we surface that as a `loading: true` prop.
+  // Primitives that natively understand the prop (DataTable, Chart) render a
+  // skeleton; widgets that follow the same convention get it for free. Bindings
+  // can still override either field.
   const dsAlias = node.dataSource?.alias
   const dsInjected: Record<string, unknown> = dsAlias
-    ? { data: context.datasource[dsAlias] ?? [] }
+    ? {
+        data: context.datasource[dsAlias] ?? [],
+        loading: !!loadingDatasource[dsAlias],
+      }
     : {}
 
   // ── Tabs content wiring ────────────────────────────────────────────────────
