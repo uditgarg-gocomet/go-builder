@@ -26,7 +26,7 @@ export {
   type CancelShipmentSuccessEventPayload,
   type CancelShipmentErrorEventPayload,
   type CancelShipmentCloseEventPayload,
-} from './CancelShipmentModal/index.js'
+} from "./CancelShipmentModal/index.js";
 
 export {
   AddDocumentModal,
@@ -49,4 +49,36 @@ export {
   type AddDocumentSuccessEventPayload,
   type AddDocumentErrorEventPayload,
   type AddDocumentCloseEventPayload,
-} from './AddDocumentModal/index.js'
+} from "./AddDocumentModal/index.js";
+
+export {
+  DRDVModal,
+  drdvModalManifest,
+  drdvModalPropsSchema,
+  fetchExtraction,
+  fetchVerification,
+  submitApproval,
+  submitRetry,
+  DRDV_DEFAULTS,
+  DRDV_ROUTES,
+  DRDV_STAGE,
+  DRDV_APPROVAL_STATUS,
+  DRDV_EVENTS,
+  type DRDVModalProps,
+  type ExtractionDetailsResponse,
+  type VerificationDetailsResponse,
+  type DocumentExtractionStatus,
+  type ApprovalStatus,
+  type ActionConfig,
+  type DRDVTableColumn,
+  type DRDVFieldsTableRow,
+  type FieldsTable,
+  type LineItemsTable,
+  type DocumentInfo,
+  type ProgressDetails,
+  type DRDVNextEventPayload,
+  type DRDVApprovalEventPayload,
+  type DRDVRetryEventPayload,
+  type DRDVErrorEventPayload,
+  type DRDVCloseEventPayload,
+} from "./DRDVModal/index.js";

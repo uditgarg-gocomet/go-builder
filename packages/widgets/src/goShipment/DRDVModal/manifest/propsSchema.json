@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DRDVModal",
+  "description": "Document Review & Validation modal — two stages (extraction + verification) with side-by-side comparison.",
+  "type": "object",
+  "properties": {
+    "open": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the modal is visible. Bind to a state slot."
+    },
+    "swaId": {
+      "type": "string",
+      "default": "",
+      "description": "Shipment Workflow Activity ID. Bind to {{datasource.shipment.swa_id}}."
+    },
+    "documentBucketId": {
+      "type": "string",
+      "default": "",
+      "description": "document_type for this bucket (e.g. draft_bill_of_lading)."
+    },
+    "checklistTags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["document_verification_step"],
+      "description": "Checklist tags forwarded to the extraction + verification GETs."
+    },
+    "checklistId": {
+      "type": "string",
+      "default": "",
+      "description": "checklist_id required by the workflow API."
+    },
+    "apiMode": {
+      "type": "string",
+      "enum": ["mock", "real"],
+      "default": "mock",
+      "description": "`mock` returns a canned realistic response; `real` proxies to gocomet."
+    },
+    "mockDelayMs": {
+      "type": "number",
+      "minimum": 0,
+      "default": 800,
+      "description": "Mock-only artificial latency."
+    },
+    "hideCtas": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, hides ALL action buttons (verify/reject/reverify/retry/next) regardless of server-driven flags. Use for permission-gated views."
+    },
+    "extractionApprovedEventName": { "type": "string", "default": "drdv:extraction-approved" },
+    "verifySuccessEventName":      { "type": "string", "default": "drdv:verify-success" },
+    "rejectSuccessEventName":      { "type": "string", "default": "drdv:reject-success" },
+    "reverifySuccessEventName":    { "type": "string", "default": "drdv:reverify-success" },
+    "retrySuccessEventName":       { "type": "string", "default": "drdv:retry-success" },
+    "errorEventName":              { "type": "string", "default": "drdv:error" },
+    "cancelEventName":             { "type": "string", "default": "drdv:cancel" }
+  },
+  "additionalProperties": false
+}
