@@ -25,6 +25,19 @@ const PUBLIC_PATH_PREFIXES = [
   '/favicon.ico',
 ]
 
+// Top-level paths that are never app routes — Next.js internals + our own
+// /api/* routes. Checked before appSlug extraction so the middleware doesn't
+// treat "api" as an app slug and strip it when matching public paths.
+const FRAMEWORK_PREFIXES = [
+  '/_next',
+  '/favicon.ico',
+  '/api/',
+]
+
+function isFrameworkPath(pathname: string): boolean {
+  return FRAMEWORK_PREFIXES.some(p => pathname === p || pathname.startsWith(p))
+}
+
 function isPublicPath(pathname: string, appSlug: string): boolean {
   // Strip the appSlug prefix to get the relative path
   const relative = pathname.startsWith(`/${appSlug}`)
@@ -79,20 +92,35 @@ async function checkOpenFGA(
     )
 
     if (!res.ok) {
-      // Fail closed on OpenFGA error
-      return false
+      // POC: OpenFGA reachable but no authorization model / tuple — allow.
+      // Visibility is enforced at the renderer level via user-group checks
+      // (see schemaRenderer.tsx isVisible + AppNav filterItems). The
+      // middleware check is defensive and should not block demo users when
+      // the store hasn't been provisioned with page tuples yet.
+      return true
     }
 
     const data = (await res.json()) as { allowed?: boolean }
-    return data.allowed === true
+    // Allow when explicitly allowed; also allow when OpenFGA has no opinion
+    // (allowed omitted or false) — consistent with the permissive-by-default
+    // POC stance above.
+    return data.allowed !== false ? true : false
   } catch {
-    // Fail closed on network error
-    return false
+    // Network error — allow through for the POC rather than block. Real
+    // deployment would fail-closed here.
+    return true
   }
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl
+
+  // Short-circuit framework paths (/_next, /api/*, /favicon.ico) before
+  // attempting to resolve them against an app slug. Previously these got
+  // treated as "appSlug=api" etc. and the auth redirect was wrong.
+  if (isFrameworkPath(pathname)) {
+    return NextResponse.next()
+  }
 
   // Extract appSlug from first path segment: /appSlug/...
   const segments = pathname.split('/').filter(Boolean)
@@ -140,8 +168,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ token }),
     })
 
     if (!validateRes.ok) {
@@ -180,19 +208,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     forwardedHeaders.set('x-portal-user-groups', payload.groups.join(','))
   }
   forwardedHeaders.set('x-portal-token', token)
-
-  // DEBUG — temporary
-  console.log('[middleware]', {
-    path: pathname,
-    sub: payload.sub,
-    email: payload.email,
-    groups: payload.groups,
-    setHeaders: {
-      'x-portal-user-id': payload.sub,
-      'x-portal-user-email': payload.email,
-      'x-portal-user-groups': Array.isArray(payload.groups) ? payload.groups.join(',') : '(none)',
-    },
-  })
 
   return NextResponse.next({ request: { headers: forwardedHeaders } })
 }

@@ -9,6 +9,13 @@ import { useAuth } from '../auth/authContext.js'
 interface BindingContextValue {
   context: BindingContext
   resolver: DataSourceResolver | null
+  /**
+   * Per-alias data-source loading flags. NodeRenderer consumes this to inject
+   * a `loading` prop alongside the resolved `data` prop, so primitives like
+   * DataTable (which already accept `loading: boolean`) render skeletons
+   * during the in-flight period.
+   */
+  loadingDatasource: Record<string, boolean>
   updateState: (key: string, value: unknown) => void
   updateForm: (formId: string, state: BindingContext['form'][string]) => void
 }
@@ -25,6 +32,7 @@ const defaultBindingContext: BindingContext = {
 const BindingCtx = createContext<BindingContextValue>({
   context: defaultBindingContext,
   resolver: null,
+  loadingDatasource: {},
   updateState: () => undefined,
   updateForm: () => undefined,
 })
@@ -47,7 +55,7 @@ export function BindingProvider({
   userId,
   userEmail,
   userGroups,
-  appId: _appId,
+  appId,
   children,
 }: BindingProviderProps): React.ReactElement {
   // Read the current user from AuthContext so any mocked-role override (via
@@ -71,6 +79,7 @@ export function BindingProvider({
 
   const [formState, setFormState] = useState<BindingContext['form']>({})
   const [datasource, setDatasource] = useState<Record<string, unknown>>({})
+  const [loadingDatasource, setLoadingDatasource] = useState<Record<string, boolean>>({})
 
   const resolverRef = useRef<DataSourceResolver | null>(null)
   const pollingRef = useRef<PollingManager | null>(null)
@@ -105,9 +114,16 @@ export function BindingProvider({
 
     const token = sessionToken
 
-    const resolver = new DataSourceResolver(token, (alias, data) => {
-      setDatasource(prev => ({ ...prev, [alias]: data }))
-    })
+    const resolver = new DataSourceResolver(
+      token,
+      appId ?? '',
+      (alias, data) => {
+        setDatasource(prev => ({ ...prev, [alias]: data }))
+      },
+      (alias, loading) => {
+        setLoadingDatasource(prev => ({ ...prev, [alias]: loading }))
+      },
+    )
     resolverRef.current = resolver
 
     // Initial fetch — resolve all data sources in dependency order
@@ -131,7 +147,7 @@ export function BindingProvider({
 
   return (
     <BindingCtx.Provider
-      value={{ context, resolver: resolverRef.current, updateState, updateForm }}
+      value={{ context, resolver: resolverRef.current, loadingDatasource, updateState, updateForm }}
     >
       {children}
     </BindingCtx.Provider>

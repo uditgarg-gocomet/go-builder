@@ -9,7 +9,7 @@ from .nodes import node, text, heading, gap, uid
 # ── Bound overview helpers ──────────────────────────────────────────────────
 
 def _b(content_binding: str, **kw) -> dict:
-    """Text with a `content` binding (e.g. {{shipment.sourcingUnit}})."""
+    """Text with a `content` binding (e.g. {{datasource.shipment.sourcingUnit}})."""
     return {
         "id": uid(),
         "type": "Text",
@@ -59,7 +59,7 @@ def _overview_card() -> dict:
         "type": "Heading",
         "source": "primitive",
         "props": {"text": "—", "level": "h2", "size": "xl", "weight": "bold"},
-        "bindings": {"text": "{{shipment.id}}"},
+        "bindings": {"text": "{{datasource.shipment.id}}"},
         "actions": [],
         "style": {},
         "responsive": {},
@@ -81,31 +81,31 @@ def _overview_card() -> dict:
     ])
 
     row1 = node("Grid", {"columns": 5, "gap": gap(4)}, [
-        _overview_field("SOURCING UNIT",    "{{shipment.sourcingUnit}}"),
-        _overview_field("SOLD TO",          "{{shipment.soldTo}}"),
-        _overview_field("SHIP TO",          "{{shipment.shipTo}}"),
-        _overview_field("SELLING INCOTERM", "{{shipment.sellingIncoterm}}"),
-        _overview_field("MODE",             "{{shipment.mode}}"),
+        _overview_field("SOURCING UNIT",    "{{datasource.shipment.sourcingUnit}}"),
+        _overview_field("SOLD TO",          "{{datasource.shipment.soldTo}}"),
+        _overview_field("SHIP TO",          "{{datasource.shipment.shipTo}}"),
+        _overview_field("SELLING INCOTERM", "{{datasource.shipment.sellingIncoterm}}"),
+        _overview_field("MODE",             "{{datasource.shipment.mode}}"),
     ])
     row2 = node("Grid", {"columns": 5, "gap": gap(4)}, [
-        _overview_field("CARRIER",      "{{shipment.carrier}}"),
-        _overview_field("POL",          "{{shipment.pol}}"),
-        _overview_field("POD",          "{{shipment.pod}}"),
-        _overview_field("BL NUMBER",    "{{shipment.blNumber}}"),
-        _overview_field("# CONTAINERS", "{{shipment.containers}}"),
+        _overview_field("CARRIER",      "{{datasource.shipment.carrier}}"),
+        _overview_field("POL",          "{{datasource.shipment.pol}}"),
+        _overview_field("POD",          "{{datasource.shipment.pod}}"),
+        _overview_field("BL NUMBER",    "{{datasource.shipment.blNumber}}"),
+        _overview_field("# CONTAINERS", "{{datasource.shipment.containers}}"),
     ])
     row3 = node("Grid", {"columns": 5, "gap": gap(4)}, [
-        _overview_field("ETD",                  "{{shipment.etd}}"),
+        _overview_field("ETD",                  "{{datasource.shipment.etd}}"),
         _overview_field_with_badge(
-            "ETA", "{{shipment.eta}}",
-            "{{shipment.etaBadge.label}}", "{{shipment.etaBadge.variant}}",
+            "ETA", "{{datasource.shipment.eta}}",
+            "{{datasource.shipment.etaBadge.label}}", "{{datasource.shipment.etaBadge.variant}}",
         ),
-        _overview_field("DOCUMENTATION STATUS", "{{shipment.docStatus}}"),
+        _overview_field("DOCUMENTATION STATUS", "{{datasource.shipment.docStatus}}"),
         _overview_field_with_badge(
-            "DOCUMENTATION HEALTH", "{{shipment.docHealth}}",
-            "{{shipment.docHealthBadge.label}}", "{{shipment.docHealthBadge.variant}}",
+            "DOCUMENTATION HEALTH", "{{datasource.shipment.docHealth}}",
+            "{{datasource.shipment.docHealthBadge.label}}", "{{datasource.shipment.docHealthBadge.variant}}",
         ),
-        _overview_field("SHIPMENT STATUS",      "{{shipment.shipmentStatus}}"),
+        _overview_field("SHIPMENT STATUS",      "{{datasource.shipment.shipmentStatus}}"),
     ])
 
     return node("Card", {"padding": "lg", "shadow": "sm", "rounded": "lg"}, [
@@ -142,20 +142,20 @@ def _details_tab() -> dict:
         node("Stack", {"direction": "vertical", "gap": gap(4)}, [
             heading("Shipment Details", "h3", size="lg", weight="semibold"),
             node("Grid", {"columns": 2, "gap": gap(4)}, [
-                _detail_field("Shipment ID",          "{{shipmentDetails.shipmentId}}"),
-                _detail_field("Shipment Status",      "{{shipmentDetails.shipmentStatus}}"),
-                _detail_field("BC Number",            "{{shipmentDetails.bcNumber}}"),
-                _detail_field("Documentation Status", "{{shipmentDetails.docStatus}}"),
-                _detail_field("BL Number",            "{{shipmentDetails.blNumber}}"),
-                _detail_field("Documentation Health", "{{shipmentDetails.docHealth}}"),
-                _detail_field("Carrier",              "{{shipmentDetails.carrier}}"),
-                _detail_field("SU Invoice Number",    "{{shipmentDetails.suInvoiceNumber}}"),
-                _detail_field("Mode",                 "{{shipmentDetails.mode}}"),
-                _detail_field("UAPL Invoice Number",  "{{shipmentDetails.uaplInvoiceNumber}}"),
-                _detail_field("POL Code",             "{{shipmentDetails.polCode}}"),
-                _detail_field("Customer PO Number",   "{{shipmentDetails.customerPoNumber}}"),
-                _detail_field("POL Name",             "{{shipmentDetails.polName}}"),
-                _detail_field("SAP Shipment Reference","{{shipmentDetails.sapShipmentReference}}"),
+                _detail_field("Shipment ID",          "{{datasource.shipmentDetails.shipmentId}}"),
+                _detail_field("Shipment Status",      "{{datasource.shipmentDetails.shipmentStatus}}"),
+                _detail_field("BC Number",            "{{datasource.shipmentDetails.bcNumber}}"),
+                _detail_field("Documentation Status", "{{datasource.shipmentDetails.docStatus}}"),
+                _detail_field("BL Number",            "{{datasource.shipmentDetails.blNumber}}"),
+                _detail_field("Documentation Health", "{{datasource.shipmentDetails.docHealth}}"),
+                _detail_field("Carrier",              "{{datasource.shipmentDetails.carrier}}"),
+                _detail_field("SU Invoice Number",    "{{datasource.shipmentDetails.suInvoiceNumber}}"),
+                _detail_field("Mode",                 "{{datasource.shipmentDetails.mode}}"),
+                _detail_field("UAPL Invoice Number",  "{{datasource.shipmentDetails.uaplInvoiceNumber}}"),
+                _detail_field("POL Code",             "{{datasource.shipmentDetails.polCode}}"),
+                _detail_field("Customer PO Number",   "{{datasource.shipmentDetails.customerPoNumber}}"),
+                _detail_field("POL Name",             "{{datasource.shipmentDetails.polName}}"),
+                _detail_field("SAP Shipment Reference","{{datasource.shipmentDetails.sapShipmentReference}}"),
             ]),
         ]),
     ])
@@ -210,7 +210,7 @@ def _drdv_slot(heading_label: str, fields_to_show: list[str], show_actions: bool
         },
         "bindings": {
             # Widget consumes `documents` prop; bound to the mock array
-            "documents": "{{drdvDocuments}}",
+            "documents": "{{datasource.drdvDocuments}}",
         },
         "actions": [],
         "style": {},

@@ -38,6 +38,7 @@ import { NavPropsPanel } from '@/components/layout/NavPropsPanel'
 import { PageMenu } from '@/components/layout/PageMenu'
 import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
 import { useSaveStatusStore, mergeSlots } from '@/stores/saveStatusStore'
+import { usePreviewTab } from '@/hooks/usePreviewTab'
 import { clientFetch } from '@/lib/clientFetch'
 import type { AppMeta, PageMeta } from '@/types/canvas'
 
@@ -136,6 +137,11 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   const saveSlots = useSaveStatusStore(s => s.slots)
   const mergedSave = mergeSlots(saveSlots)
 
+  // Preview — opens a new tab rendering the current canvas with inline mock
+  // data. No publish required, no Redis TTL to worry about at demo time
+  // (session is 1h).
+  const { opening: previewOpening, openPreview } = usePreviewTab()
+
   // Keyboard shortcuts
   useKeyboardShortcuts({ onSave: () => void saveNow() })
 
@@ -164,13 +170,33 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   const handleDragEnd = useCallback((event: DragEndEvent): void => {
     setActiveLabel(null)
     const { active, over } = event
-    if (!over) return
 
     const activeData = active.data.current as { source: string; type?: string; nodeId?: string } | undefined
-    const overData = over.data.current as { parentId?: string; position?: number } | undefined
+    const overData = over?.data.current as { parentId?: string; position?: number } | undefined
 
-    const parentId = overData?.parentId ?? rootId
-    const position = overData?.position ?? (useCanvasStore.getState().childMap[parentId]?.length ?? 0)
+    // Resolve drop target with a graceful fallback: if the drag ended outside
+    // any registered droppable (over === null) OR landed on the canvas-surface
+    // fallback (position === -1 sentinel), append to the root's children. This
+    // makes the canvas feel "always droppable" instead of dead-ending the drag
+    // when the user releases over whitespace between components.
+    const currentRootId = rootId || useCanvasStore.getState().rootId
+    const childMap = useCanvasStore.getState().childMap
+
+    const isFallbackDrop =
+      !over ||
+      overData?.position === -1
+
+    const parentId = isFallbackDrop
+      ? currentRootId
+      : (overData?.parentId ?? currentRootId)
+    const position = isFallbackDrop
+      ? (childMap[currentRootId]?.length ?? 0)
+      : (overData?.position ?? (childMap[parentId]?.length ?? 0))
+
+    // For canvas-internal moves, a fallback drop (whitespace release) is a
+    // no-op — the user almost certainly didn't mean to relocate the node to
+    // the very end of the root. Bail out instead of moving silently.
+    if (isFallbackDrop && activeData?.source === 'canvas') return
 
     if (activeData?.source === 'panel' && activeData.type) {
       const entry = useRegistryStore.getState().entries.find(e => e.name === activeData.type)
@@ -298,6 +324,16 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             }`}
           >
             JSON
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void openPreview()}
+            disabled={previewOpening}
+            title="Preview this page in a new tab with mock data"
+            className="rounded border border-input px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {previewOpening ? 'Opening…' : 'Preview ↗'}
           </button>
 
           <button

@@ -1,7 +1,16 @@
 import { PrismaClient, Prisma } from '@prisma/client'
 import { widgetSeedEntries } from '@portal/widgets/seed'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const prisma = new PrismaClient()
+
+// Resolve at runtime (NodeNext, ESM). We co-locate the dumped GoComet V2
+// layouts under `./views/*.json` so the build pipeline picks them up without
+// needing `resolveJsonModule` in tsconfig.
+const __dirname_seed = dirname(fileURLToPath(import.meta.url))
+const VIEWS_DIR = join(__dirname_seed, 'views')
 
 interface PrimitiveDefinition {
   name: string
@@ -21,10 +30,13 @@ interface PrimitiveDefinition {
   viewSchema?: ViewSchema
 }
 
-// ── View tree builder ─────────────────────────────────────────────────────────
+// ── View tree (rich layout flattener) ────────────────────────────────────────
 // Views are stored as a flat node map + childMap so the builder can drop them
-// in via insertSubtree without further parsing. The `buildViewSchema` helper
-// lets seed authors write the tree in nested form for readability.
+// in via insertSubtree without further parsing. The dumped V2 layouts already
+// include the full CanvasNode shape (id, type, source, props, bindings, style,
+// responsive, children); `flattenLayout` walks the tree and emits
+// (nodes, rootId, childMap) without losing any of those fields.
+
 interface ViewNodeShape {
   id: string
   type: string
@@ -42,34 +54,54 @@ interface ViewSchema {
   childMap: Record<string, string[]>
 }
 
-interface ViewSpec {
+interface RichNode {
   id: string
   type: string
+  source?: 'primitive' | 'custom_widget' | 'prebuilt_view'
   props?: Record<string, unknown>
-  children?: ViewSpec[]
+  bindings?: Record<string, string>
+  // Actions are scrubbed by the dump script — but tolerate the field anyway.
+  actions?: unknown[]
+  style?: Record<string, unknown>
+  responsive?: Record<string, unknown>
+  children?: RichNode[]
+  dataSource?: unknown
+  visibility?: unknown
 }
 
-function buildViewSchema(root: ViewSpec): ViewSchema {
+function flattenLayout(root: RichNode): ViewSchema {
   const nodes: Record<string, ViewNodeShape> = {}
   const childMap: Record<string, string[]> = {}
 
-  function walk(spec: ViewSpec): void {
-    nodes[spec.id] = {
-      id: spec.id,
-      type: spec.type,
-      source: 'primitive',
-      props: spec.props ?? {},
-      bindings: {},
+  function walk(node: RichNode): void {
+    // Dropping `children`, `dataSource`, `visibility` — those are layout-form
+    // fields the canvas store reconstructs from `childMap` / per-node
+    // accessors; keeping them in `nodes[id]` would create stale duplicates.
+    nodes[node.id] = {
+      id: node.id,
+      type: node.type,
+      source: node.source ?? 'primitive',
+      props: node.props ?? {},
+      bindings: node.bindings ?? {},
+      // Scrub actions so a view dropped on a fresh canvas doesn't reference
+      // action ids that only exist on the source app.
       actions: [],
-      style: {},
-      responsive: {},
+      style: node.style ?? {},
+      responsive: node.responsive ?? {},
     }
-    childMap[spec.id] = (spec.children ?? []).map(c => c.id)
-    for (const child of spec.children ?? []) walk(child)
+    const children = node.children ?? []
+    childMap[node.id] = children.map(c => c.id)
+    for (const c of children) walk(c)
   }
 
   walk(root)
   return { nodes, rootId: root.id, childMap }
+}
+
+function loadV2Layout(filename: string): ViewSchema {
+  const path = join(VIEWS_DIR, filename)
+  const raw = readFileSync(path, 'utf-8')
+  return flattenLayout(JSON.parse(raw) as RichNode)
 }
 
 // Mark components released within this window as "New" in the builder picker.
@@ -904,186 +936,45 @@ const primitives: PrimitiveDefinition[] = [
 // stay empty; the tree lives in `viewSchema`.
 const EMPTY_PROPS_SCHEMA = { type: 'object', properties: {} } as const
 
+// Layouts are loaded from `./views/*.json`, dumped from the GoComet V2 Python
+// builders (`scripts/dump-gocomet-v2-layouts.py`). Re-run that script after
+// editing the V2 layouts to refresh the view templates.
 const views: PrimitiveDefinition[] = [
   {
     name: 'HomeView',
     displayName: 'Home',
-    description: 'Dashboard landing page — KPI stat cards, recent activity table, and welcome heading. Imports as editable components.',
+    description: 'GoComet V2 home page — hero banner, search bar, and shipment-status pills. Imports as fully editable components.',
     category: 'Logistics',
     group: 'Logistics',
     icon: 'home',
-    tags: ['view', 'home', 'dashboard', 'kpi', 'landing'],
+    tags: ['view', 'home', 'gocomet', 'landing', 'logistics'],
     propsSchema: EMPTY_PROPS_SCHEMA,
     defaultProps: {},
-    viewSchema: buildViewSchema({
-      id: 'home-root',
-      type: 'Stack',
-      props: { direction: 'vertical', gap: 6, align: 'stretch', justify: 'start' },
-      children: [
-        { id: 'home-h1', type: 'Heading', props: { text: 'Welcome', level: 'h1', size: '2xl', weight: 'bold' } },
-        {
-          id: 'home-stats',
-          type: 'Grid',
-          props: { columns: 4, gap: 4, align: 'stretch' },
-          children: [
-            { id: 'home-stat-1', type: 'StatCard', props: { label: 'Active Shipments', value: '128', trend: 'neutral', format: 'number' } },
-            { id: 'home-stat-2', type: 'StatCard', props: { label: 'In Transit', value: '42', trend: 'up', format: 'number' } },
-            { id: 'home-stat-3', type: 'StatCard', props: { label: 'Delivered Today', value: '17', trend: 'up', format: 'number' } },
-            { id: 'home-stat-4', type: 'StatCard', props: { label: 'Exceptions', value: '3', trend: 'down', format: 'number' } },
-          ],
-        },
-        { id: 'home-h2', type: 'Heading', props: { text: 'Recent Activity', level: 'h2', size: 'lg', weight: 'semibold' } },
-        {
-          id: 'home-table',
-          type: 'DataTable',
-          props: {
-            title: 'Recent Shipments',
-            columns: [
-              { key: 'id', label: 'Shipment ID', sortable: true },
-              { key: 'origin', label: 'Origin', sortable: true },
-              { key: 'destination', label: 'Destination', sortable: true },
-              { key: 'status', label: 'Status', sortable: false },
-            ],
-            pageSize: 10,
-            striped: true,
-            searchable: false,
-            exportable: false,
-          },
-        },
-      ],
-    }),
+    viewSchema: loadV2Layout('home.json'),
   },
   {
     name: 'ShipmentListView',
-    displayName: 'Shipment List',
-    description: 'Paginated table of shipments with search, status filter, and date-range filter. Imports as editable components.',
+    displayName: 'Shipments',
+    description: 'GoComet V2 shipments page — filter banner, segmented status tabs, and the full shipments table. Imports as fully editable components.',
     category: 'Logistics',
     group: 'Logistics',
     icon: 'list',
-    tags: ['view', 'shipment', 'list', 'table', 'logistics'],
+    tags: ['view', 'shipments', 'gocomet', 'table', 'logistics'],
     propsSchema: EMPTY_PROPS_SCHEMA,
     defaultProps: {},
-    viewSchema: buildViewSchema({
-      id: 'shiplist-root',
-      type: 'Stack',
-      props: { direction: 'vertical', gap: 4, align: 'stretch', justify: 'start' },
-      children: [
-        { id: 'shiplist-h1', type: 'Heading', props: { text: 'Shipments', level: 'h1', size: '2xl', weight: 'bold' } },
-        {
-          id: 'shiplist-filters',
-          type: 'Stack',
-          props: { direction: 'horizontal', gap: 3, align: 'center', justify: 'start', wrap: true },
-          children: [
-            { id: 'shiplist-search', type: 'TextInput', props: { label: '', placeholder: 'Search shipments…', prefix: '', suffix: '' } },
-            {
-              id: 'shiplist-status',
-              type: 'Select',
-              props: {
-                label: '',
-                placeholder: 'Status',
-                options: [
-                  { value: 'all', label: 'All' },
-                  { value: 'in_transit', label: 'In Transit' },
-                  { value: 'delivered', label: 'Delivered' },
-                  { value: 'delayed', label: 'Delayed' },
-                  { value: 'cancelled', label: 'Cancelled' },
-                ],
-                searchable: false,
-              },
-            },
-            { id: 'shiplist-date', type: 'DatePicker', props: { label: '', mode: 'range', placeholder: 'Date range' } },
-          ],
-        },
-        {
-          id: 'shiplist-table',
-          type: 'DataTable',
-          props: {
-            title: '',
-            columns: [
-              { key: 'id', label: 'Shipment ID', sortable: true },
-              { key: 'origin', label: 'Origin', sortable: true },
-              { key: 'destination', label: 'Destination', sortable: true },
-              { key: 'eta', label: 'ETA', sortable: true },
-              { key: 'status', label: 'Status', sortable: false },
-            ],
-            pageSize: 20,
-            striped: true,
-            searchable: true,
-            exportable: true,
-          },
-        },
-      ],
-    }),
+    viewSchema: loadV2Layout('shipments.json'),
   },
   {
     name: 'ShipmentDetailsView',
-    displayName: 'Shipment Details',
-    description: 'Full detail page for a single shipment — header with status badge, overview / status cards, timeline table, and documents table.',
+    displayName: 'Shipment Detail',
+    description: 'GoComet V2 shipment detail page — overview header, tabs (Details / Documents / Tracking), DRDV widget instance, and mandatory-documents queue. Requires the DRDV widget to be registered in the destination app.',
     category: 'Logistics',
     group: 'Logistics',
     icon: 'package',
-    tags: ['view', 'shipment', 'details', 'logistics', 'timeline'],
+    tags: ['view', 'shipment', 'details', 'gocomet', 'logistics', 'drdv'],
     propsSchema: EMPTY_PROPS_SCHEMA,
     defaultProps: {},
-    viewSchema: buildViewSchema({
-      id: 'shipdet-root',
-      type: 'Stack',
-      props: { direction: 'vertical', gap: 6, align: 'stretch', justify: 'start' },
-      children: [
-        {
-          id: 'shipdet-header',
-          type: 'Stack',
-          props: { direction: 'horizontal', gap: 3, align: 'center', justify: 'between' },
-          children: [
-            { id: 'shipdet-h1', type: 'Heading', props: { text: 'Shipment SHP-00128', level: 'h1', size: '2xl', weight: 'bold' } },
-            { id: 'shipdet-badge', type: 'Badge', props: { label: 'In Transit', variant: 'info' } },
-          ],
-        },
-        {
-          id: 'shipdet-grid',
-          type: 'Grid',
-          props: { columns: 2, gap: 4, align: 'stretch' },
-          children: [
-            { id: 'shipdet-overview', type: 'Card', props: { title: 'Overview', description: 'Origin, destination, and carrier details', padding: 'md', shadow: 'sm' } },
-            { id: 'shipdet-status', type: 'Card', props: { title: 'Status', description: 'Current location and ETA', padding: 'md', shadow: 'sm' } },
-          ],
-        },
-        { id: 'shipdet-h2', type: 'Heading', props: { text: 'Timeline', level: 'h2', size: 'lg', weight: 'semibold' } },
-        {
-          id: 'shipdet-timeline',
-          type: 'DataTable',
-          props: {
-            title: '',
-            columns: [
-              { key: 'timestamp', label: 'Time', sortable: true },
-              { key: 'event', label: 'Event', sortable: false },
-              { key: 'location', label: 'Location', sortable: false },
-            ],
-            pageSize: 10,
-            striped: false,
-            searchable: false,
-            exportable: false,
-          },
-        },
-        { id: 'shipdet-h3', type: 'Heading', props: { text: 'Documents', level: 'h2', size: 'lg', weight: 'semibold' } },
-        {
-          id: 'shipdet-documents',
-          type: 'DataTable',
-          props: {
-            title: '',
-            columns: [
-              { key: 'name', label: 'Document', sortable: true },
-              { key: 'type', label: 'Type', sortable: true },
-              { key: 'uploadedAt', label: 'Uploaded', sortable: true },
-            ],
-            pageSize: 5,
-            striped: false,
-            searchable: false,
-            exportable: true,
-          },
-        },
-      ],
-    }),
+    viewSchema: loadV2Layout('details.json'),
   },
 ]
 
@@ -1246,7 +1137,7 @@ async function seed() {
             tags: view.tags,
             propsSchema: view.propsSchema as Prisma.InputJsonValue,
             defaultProps: view.defaultProps as Prisma.InputJsonValue,
-            viewSchema: (view.viewSchema ?? null) as Prisma.InputJsonValue,
+            viewSchema: (view.viewSchema ?? null) as unknown as Prisma.InputJsonValue,
           },
         })
         updated++
@@ -1273,7 +1164,7 @@ async function seed() {
         version: '1.0.0',
         propsSchema: view.propsSchema as Prisma.InputJsonValue,
         defaultProps: view.defaultProps as Prisma.InputJsonValue,
-        viewSchema: (view.viewSchema ?? null) as Prisma.InputJsonValue,
+        viewSchema: (view.viewSchema ?? null) as unknown as Prisma.InputJsonValue,
         displayName: view.displayName,
         description: view.description,
         category: view.category,

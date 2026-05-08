@@ -16,6 +16,25 @@ const BLOCKED_HOSTNAMES = new Set([
   'metadata.google.internal',     // GCP metadata
 ])
 
+/**
+ * Comma-separated hostnames that bypass the SSRF checks. Intended for dev
+ * setups where the renderer's CUSTOM_MANUAL data sources legitimately point at
+ * an internal mock API on the same host (e.g. the GoComet V2 demo, where the
+ * builder-managed schema declares URLs like `http://localhost:3001/mock/v2/…`).
+ *
+ * Production should leave this empty. Set via `SSRF_ALLOWED_HOSTS=localhost`
+ * (or `localhost,127.0.0.1`) in the dev `.env` only.
+ */
+function readAllowlist(): Set<string> {
+  const raw = process.env['SSRF_ALLOWED_HOSTS'] ?? ''
+  return new Set(
+    raw
+      .split(',')
+      .map(h => h.trim().toLowerCase())
+      .filter(Boolean),
+  )
+}
+
 export function validateUrl(rawUrl: string): void {
   let parsed: URL
   try {
@@ -33,6 +52,14 @@ export function validateUrl(rawUrl: string): void {
   }
 
   const hostname = parsed.hostname.toLowerCase()
+
+  // Per-environment allowlist short-circuit. Read on every call so test/dev
+  // can flip the env var without restarting (handy for the GoComet V2 mock
+  // setup). Cost is trivial relative to the network round-trip that follows.
+  const allowlist = readAllowlist()
+  if (allowlist.has(hostname)) {
+    return
+  }
 
   if (BLOCKED_HOSTNAMES.has(hostname)) {
     throw Object.assign(
