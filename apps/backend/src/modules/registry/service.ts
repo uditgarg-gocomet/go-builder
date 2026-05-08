@@ -35,6 +35,13 @@ export async function listForApp(appId: string) {
     status: e.status,
     currentVersion: e.currentVersion,
     sourceType: e.sourceType,
+    createdBy: e.createdBy,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    // Retain both shapes: `versions` matches the RegistryEntry schema the
+    // builder types against, `currentVersionDetails` is the historical
+    // convenience accessor used by existing clients/tests.
+    versions: e.versions,
     currentVersionDetails: e.versions[0] ?? null,
   }))
 }
@@ -88,9 +95,9 @@ export async function getPropsSchema(componentNames: string[]): Promise<Record<s
 
 export async function registerCustomWidget(request: RegisterCustomWidgetRequest) {
   const {
-    name, displayName, description, category, icon, tags,
+    name, displayName, description, category, group, icon, tags,
     version, bundleUrl, bundleHash, propsSchema, defaultProps,
-    appId, registeredBy,
+    releasedAt, appId, registeredBy,
   } = request
 
   // Check for name collision in COMMON scope
@@ -131,8 +138,10 @@ export async function registerCustomWidget(request: RegisterCustomWidgetRequest)
       displayName,
       description: description ?? null,
       category,
+      group: group ?? null,
       icon: icon ?? null,
       tags,
+      releasedAt: releasedAt ?? null,
       publishedBy: registeredBy,
     },
   })
@@ -145,8 +154,8 @@ export async function registerCustomWidget(request: RegisterCustomWidgetRequest)
 
 export async function savePrebuiltView(request: SavePrebuiltViewRequest) {
   const {
-    name, displayName, description, category, icon, tags,
-    viewSchema, propsSchema, defaultProps, appId, savedBy,
+    name, displayName, description, category, group, icon, tags,
+    viewSchema, propsSchema, defaultProps, releasedAt, appId, savedBy,
   } = request
 
   // Upsert: update existing or create new
@@ -191,8 +200,10 @@ export async function savePrebuiltView(request: SavePrebuiltViewRequest) {
       displayName,
       description: description ?? null,
       category,
+      group: group ?? null,
       icon: icon ?? null,
       tags,
+      releasedAt: releasedAt ?? null,
       publishedBy: savedBy,
     },
   })

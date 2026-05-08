@@ -29,6 +29,16 @@ vi.mock('../../../lib/db.js', () => ({
   db: {
     page: {
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => pages.get(where.id) ?? null),
+      findMany: vi.fn(async ({ where }: {
+        where: { appId: string; id?: { not?: string; notIn?: string[] } }
+      }) => {
+        return Array.from(pages.values()).filter(p => {
+          if (p.appId !== where.appId) return false
+          if (where.id?.not && p.id === where.id.not) return false
+          if (where.id?.notIn && where.id.notIn.includes(p.id)) return false
+          return true
+        }).map(p => ({ id: p.id }))
+      }),
     },
     pageVersion: {
       findFirst: vi.fn(async ({ where, orderBy }: {
@@ -76,6 +86,22 @@ vi.mock('../../../lib/db.js', () => ({
         pageVersions.set(where.id, updated)
         return updated
       }),
+      upsert: vi.fn(async ({ where, update, create }: {
+        where: { pageId_version: { pageId: string; version: string } }
+        update: Partial<PageVersionRecord>
+        create: Omit<PageVersionRecord, 'id'>
+      }) => {
+        const { pageId, version } = where.pageId_version
+        const existing = Array.from(pageVersions.values()).find(pv => pv.pageId === pageId && pv.version === version)
+        if (existing) {
+          const updated = { ...existing, ...update }
+          pageVersions.set(existing.id, updated)
+          return updated
+        }
+        const record: PageVersionRecord = { id: nextId(), ...create }
+        pageVersions.set(record.id, record)
+        return record
+      }),
     },
     deployment: {
       create: vi.fn(async ({ data }: { data: Omit<DeploymentRecord, 'id' | 'deployedAt'> }) => {
@@ -118,7 +144,7 @@ vi.stubGlobal('fetch', fetchMock)
 
 // ── Import modules under test ─────────────────────────────────────────────────
 
-import { saveDraft, promoteToStaging, promoteToProduction, rollback, triggerBuild } from '../service.js'
+import { saveDraft, promoteToStaging, promoteToProduction, promoteApp, rollback, triggerBuild } from '../service.js'
 import type { PageSchema } from '../types.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -321,6 +347,124 @@ describe('promoteToProduction', () => {
     expect(result.version).toBe('1.0.1')
     const dep = deployments.get(result.deploymentId)
     expect(dep!.environment).toBe('PRODUCTION')
+  })
+})
+
+describe('promote — carry-forward of other pages', () => {
+  it('staging promote of one page links the other pages\' latest STAGED versions', async () => {
+    seedPage('page-1', 'app-1')
+    seedPage('page-2', 'app-1')
+
+    // page-2 already has a STAGED version live on staging
+    const otherStaged = seedPageVersion('page-2', 'STAGED', '1.0.0')
+    // page-1 has a fresh draft we're about to promote
+    const draft = seedPageVersion('page-1', 'DRAFT', '0.1.0')
+
+    const result = await promoteToStaging(draft.id, {
+      bumpType: 'patch',
+      changelog: 'tweaks',
+      promotedBy: 'fde-1',
+    })
+
+    const links = Array.from(deploymentPages.values()).filter(d => d.deploymentId === result.deploymentId)
+    const linkedVersionIds = links.map(l => l.pageVersionId).sort()
+    expect(linkedVersionIds).toEqual([draft.id, otherStaged.id].sort())
+  })
+
+  it('production promote does not pull in STAGED versions of other pages', async () => {
+    seedPage('page-1', 'app-1')
+    seedPage('page-2', 'app-1')
+
+    // page-2 only has a STAGED version, no PUBLISHED yet — must not appear in
+    // a PRODUCTION deployment.
+    seedPageVersion('page-2', 'STAGED', '1.0.0')
+    const staged = seedPageVersion('page-1', 'STAGED', '0.1.0')
+
+    const result = await promoteToProduction(staged.id, {
+      bumpType: 'patch',
+      changelog: 'go live',
+      promotedBy: 'fde-1',
+    })
+
+    const links = Array.from(deploymentPages.values()).filter(d => d.deploymentId === result.deploymentId)
+    expect(links.map(l => l.pageVersionId)).toEqual([staged.id])
+  })
+
+  it('skips other pages with no live version in the target environment', async () => {
+    seedPage('page-1', 'app-1')
+    seedPage('page-2', 'app-1') // no versions at all
+    const draft = seedPageVersion('page-1', 'DRAFT', '0.1.0')
+
+    const result = await promoteToStaging(draft.id, {
+      bumpType: 'patch',
+      changelog: 'first publish',
+      promotedBy: 'fde-1',
+    })
+
+    const links = Array.from(deploymentPages.values()).filter(d => d.deploymentId === result.deploymentId)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.pageVersionId).toBe(draft.id)
+  })
+})
+
+describe('promoteApp (publish all pages)', () => {
+  it('promotes every DRAFT page to staging in one deployment', async () => {
+    seedPage('page-1', 'app-1')
+    seedPage('page-2', 'app-1')
+    const d1 = seedPageVersion('page-1', 'DRAFT', '0.1.0')
+    const d2 = seedPageVersion('page-2', 'DRAFT', '0.2.0')
+
+    const result = await promoteApp('app-1', 'STAGING', {
+      bumpType: 'minor',
+      changelog: 'release',
+      promotedBy: 'fde-1',
+    })
+
+    expect(result.promotedCount).toBe(2)
+
+    expect(pageVersions.get(d1.id)!.status).toBe('STAGED')
+    expect(pageVersions.get(d1.id)!.version).toBe('0.2.0')
+    expect(pageVersions.get(d2.id)!.status).toBe('STAGED')
+    expect(pageVersions.get(d2.id)!.version).toBe('0.3.0')
+
+    const links = Array.from(deploymentPages.values()).filter(d => d.deploymentId === result.deploymentId)
+    expect(links.map(l => l.pageVersionId).sort()).toEqual([d1.id, d2.id].sort())
+  })
+
+  it('carries forward pages without a draft when others are promoted', async () => {
+    seedPage('page-1', 'app-1')
+    seedPage('page-2', 'app-1')
+    const otherStaged = seedPageVersion('page-2', 'STAGED', '1.0.0')
+    const d1 = seedPageVersion('page-1', 'DRAFT', '0.1.0')
+
+    const result = await promoteApp('app-1', 'STAGING', {
+      bumpType: 'patch',
+      changelog: 'release',
+      promotedBy: 'fde-1',
+    })
+
+    expect(result.promotedCount).toBe(1)
+    const links = Array.from(deploymentPages.values()).filter(d => d.deploymentId === result.deploymentId)
+    expect(links.map(l => l.pageVersionId).sort()).toEqual([d1.id, otherStaged.id].sort())
+  })
+
+  it('rejects when no eligible candidates exist', async () => {
+    seedPage('page-1', 'app-1')
+    seedPageVersion('page-1', 'STAGED', '1.0.0') // no DRAFT
+
+    await expect(promoteApp('app-1', 'STAGING', {
+      bumpType: 'patch',
+      changelog: 'release',
+      promotedBy: 'fde-1',
+    })).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it('rejects when the app has no pages', async () => {
+    await expect(promoteApp('app-1', 'STAGING', {
+      bumpType: 'patch',
+      changelog: 'release',
+      promotedBy: 'fde-1',
+    })).rejects.toMatchObject({ statusCode: 400 })
   })
 })
 

@@ -5,6 +5,17 @@ import type { HeaderConfig, NavConfig, NavItem } from '@portal/core'
 import { useAppStore } from '@/stores/appStore'
 import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
 
+const BACKEND_URL = process.env['NEXT_PUBLIC_BACKEND_URL'] ?? 'http://localhost:3001'
+
+// Resolves a HeaderConfig.logoAssetId to a full image URL. The field stores
+// either an asset `key` (the preferred shape set by LogoPicker) or a full
+// URL (legacy/pasted values), so we handle both.
+function resolveLogoUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  if (value.startsWith('http://') || value.startsWith('https://')) return value
+  return `${BACKEND_URL}/assets/${value}`
+}
+
 // Non-interactive preview of the app's header and nav, rendered in the
 // Builder canvas frame around the page canvas. Clicking opens the right-side
 // props panel (HeaderPropsPanel / NavPropsPanel) instead of the normal
@@ -72,6 +83,7 @@ export function CanvasChrome({ children }: CanvasChromeProps): React.ReactElemen
 // ── Header bar ──────────────────────────────────────────────────────────────
 
 function AppHeaderBar({ header, active, onClick }: { header: HeaderConfig; active: boolean; onClick: () => void }): React.ReactElement {
+  const logoUrl = resolveLogoUrl(header.logoAssetId)
   return (
     <button
       type="button"
@@ -82,7 +94,12 @@ function AppHeaderBar({ header, active, onClick }: { header: HeaderConfig; activ
       title="Click to edit header"
     >
       {header.showLogo && (
-        <div className="h-6 w-6 rounded bg-muted shrink-0" aria-hidden />
+        logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="h-6 w-6 shrink-0 rounded object-contain" />
+        ) : (
+          <div className="h-6 w-6 rounded bg-muted shrink-0" aria-hidden />
+        )
       )}
       {header.showAppTitle && (
         <span className="text-sm font-semibold text-foreground truncate">

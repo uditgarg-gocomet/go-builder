@@ -36,6 +36,38 @@ export class ActionExecutor {
     if (!action) {
       return { actionId, success: false, error: `Action not found: ${actionId}`, durationMs: 0, correlationId: id }
     }
+
+    // ── Permission check ────────────────────────────────────────────────────
+    // When an action declares `requireGroups`, the current user must have at
+    // least one of them. Failing this short-circuits dispatch, shows a toast,
+    // and posts a DENIED entry to /action-logs — satisfying the POC "permission
+    // denial logged" acceptance criterion.
+    if (action.requireGroups && action.requireGroups.length > 0) {
+      const userGroups = this.deps.bindingContext().user?.groups ?? []
+      const allowed = action.requireGroups.some(g => userGroups.includes(g))
+      if (!allowed) {
+        this.deps.toastManager.show({
+          title: 'Not allowed',
+          description: `You do not have permission to run "${action.name}".`,
+          variant: 'error',
+        })
+        this.logResult({
+          actionId,
+          success: false,
+          error: `Denied — requires one of: ${action.requireGroups.join(', ')}`,
+          durationMs: 0,
+          correlationId: id,
+        }, action, 'DENIED')
+        return {
+          actionId,
+          success: false,
+          error: 'Permission denied',
+          durationMs: 0,
+          correlationId: id,
+        }
+      }
+    }
+
     const start = Date.now()
     let success = false
     let data: unknown
@@ -52,7 +84,7 @@ export class ActionExecutor {
     const result: ExecuteResult = error !== undefined
       ? { actionId, success, data, error, durationMs, correlationId: id }
       : { actionId, success, data, durationMs, correlationId: id }
-    this.logResult(result)
+    this.logResult(result, action, success ? 'SUCCESS' : 'ERROR')
 
     if (success && action.outcomes?.onSuccess) {
       for (const nextId of action.outcomes.onSuccess) {
@@ -243,7 +275,11 @@ export class ActionExecutor {
     return res.json() as Promise<unknown>
   }
 
-  private logResult(result: ExecuteResult): void {
+  private logResult(
+    result: ExecuteResult,
+    action: ActionDef,
+    status: 'SUCCESS' | 'ERROR' | 'DENIED',
+  ): void {
     void fetch(`${this.ctx.backendUrl}/action-logs`, {
       method: 'POST',
       headers: {
@@ -256,7 +292,9 @@ export class ActionExecutor {
           pageId: this.ctx.pageId,
           userId: this.ctx.userId,
           actionId: result.actionId,
-          status: result.success ? 'SUCCESS' : 'FAILURE',
+          actionName: action.name,
+          actionType: action.type,
+          status,
           durationMs: result.durationMs,
           error: result.error,
           correlationId: result.correlationId,

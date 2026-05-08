@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
+import multipart from '@fastify/multipart'
 import { v4 as uuidv4 } from 'uuid'
 
 import { initSentry, Sentry } from './lib/sentry.js'
@@ -29,11 +30,27 @@ const fastify = Fastify({
 
 await fastify.register(helmet, {
   contentSecurityPolicy: false,
+  // The builder + renderer run on different origins than the backend. Helmet's
+  // default CORP policy of 'same-origin' blocks asset fetches (e.g. <img src>
+  // from the logo picker preview). Relaxing to 'cross-origin' is safe here —
+  // asset keys are content-addressed hashes served with a long cache header,
+  // and CORS already gates credentialed API calls.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 })
 
 await fastify.register(cors, {
   origin: process.env['CORS_ORIGIN']?.split(',') ?? '*',
   credentials: true,
+})
+
+// Enables multipart/form-data parsing used by the assets upload route. Cap
+// mirrors validateFile's 10MB guard so oversized bodies are rejected at
+// parse time rather than after buffering into memory.
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+  },
 })
 
 // ── correlationId middleware ───────────────────────────────────────────────────

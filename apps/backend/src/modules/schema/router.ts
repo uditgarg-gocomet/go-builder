@@ -5,6 +5,7 @@ import {
   getDraft,
   promoteToStaging,
   promoteToProduction,
+  promoteApp,
   rollback,
   getHistory,
   getDiff,
@@ -84,6 +85,37 @@ export async function schemaRouter(fastify: FastifyInstance): Promise<void> {
 
       try {
         const result = await promoteToProduction(request.params.versionId, body.data)
+        return reply.status(200).send(result)
+      } catch (err: unknown) {
+        const e = err as { message?: string; statusCode?: number }
+        return reply.status(e.statusCode ?? 500).send({ error: e.message })
+      }
+    }
+  )
+
+  // ── POST /schema/apps/:appId/promote/:env ─────────────────────────────────────
+  // App-level "publish all pages" — promotes every eligible page in one shot
+  // and creates a single Deployment listing all of them (plus carry-forward
+  // for any page that didn't have a candidate version).
+  fastify.post<{ Params: { appId: string; env: string } }>(
+    '/apps/:appId/promote/:env',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      const env = request.params.env
+      if (env !== 'staging' && env !== 'production') {
+        return reply.status(400).send({ error: 'Environment must be "staging" or "production"' })
+      }
+      const body = PromoteRequestSchema.safeParse(request.body)
+      if (!body.success) {
+        return reply.status(400).send({ error: 'Validation error', issues: body.error.issues })
+      }
+
+      try {
+        const result = await promoteApp(
+          request.params.appId,
+          env === 'staging' ? 'STAGING' : 'PRODUCTION',
+          body.data,
+        )
         return reply.status(200).send(result)
       } catch (err: unknown) {
         const e = err as { message?: string; statusCode?: number }

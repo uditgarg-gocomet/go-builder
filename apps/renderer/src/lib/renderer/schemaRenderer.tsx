@@ -53,17 +53,48 @@ export function NodeRenderer({ node }: NodeRendererProps): React.ReactElement | 
     return null
   }
 
+  // ── dataSource → `data` prop ───────────────────────────────────────────────
+  // Any node with a `dataSource.alias` has its resolved data injected as the
+  // `data` prop. Primitives that consume tabular / list data (DataTable,
+  // Chart) read this directly; widgets that follow the same convention get
+  // it too. Bindings in `node.bindings` still win (last-write wins in the
+  // merge below) so FDEs can override with a custom expression if they need.
+  const dsAlias = node.dataSource?.alias
+  const dsInjected: Record<string, unknown> = dsAlias
+    ? { data: context.datasource[dsAlias] ?? [] }
+    : {}
+
+  // ── Tabs content wiring ────────────────────────────────────────────────────
+  // Schema convention: a Tabs node's `children` are the per-tab content
+  // panes, one per entry in `props.items`. We pair them up and pass via the
+  // Tabs primitive's `items[i].content` prop. This makes tab switching
+  // actually render different content instead of stacking everything below.
+  let tabsPropsOverride: Record<string, unknown> | null = null
+  let suppressChildren = false
+  if (node.type === 'Tabs' && Array.isArray(resolvedProps['items'])) {
+    const items = (resolvedProps['items'] as Array<Record<string, unknown>>).map((item, idx) => ({
+      ...item,
+      content: node.children[idx]
+        ? <NodeRenderer key={node.children[idx]!.id} node={node.children[idx]!} />
+        : null,
+    }))
+    tabsPropsOverride = { items }
+    suppressChildren = true
+  }
+
   // Library-locked invariant: for built-in custom widgets, filter props to
   // the manifest's declared shape. Overrides injected via the page definition
   // that aren't declared by the widget are dropped so the page cannot reach
   // into widget internals.
+  const baseProps = { ...dsInjected, ...resolvedProps, ...(tabsPropsOverride ?? {}) }
   const safeProps =
     node.source === 'custom_widget' && isBuiltInWidget(node.type)
-      ? filterWidgetProps(node.type, resolvedProps)
-      : resolvedProps
+      ? filterWidgetProps(node.type, baseProps)
+      : baseProps
 
-  const children =
-    node.children.length > 0
+  const children = suppressChildren
+    ? undefined
+    : node.children.length > 0
       ? node.children.map(child => <NodeRenderer key={child.id} node={child} />)
       : undefined
 

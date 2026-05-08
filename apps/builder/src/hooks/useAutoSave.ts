@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePageStore } from '@/stores/pageStore'
 import { useAppStore } from '@/stores/appStore'
+import { useSaveStatusStore } from '@/stores/saveStatusStore'
 import { serializeCanvasToSchema } from '@/lib/schema/serialize'
 import { clientFetch } from '@/lib/clientFetch'
 
@@ -34,6 +35,9 @@ export function useAutoSave(userId: string): AutoSaveResult {
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [warning, setWarning] = useState<string | undefined>(undefined)
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined)
+
+  const setSlot = useSaveStatusStore(s => s.setSlot)
+  const clearSlot = useSaveStatusStore(s => s.clearSlot)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savingRef = useRef(false)
@@ -164,6 +168,15 @@ export function useAutoSave(userId: string): AutoSaveResult {
       if (timerRef.current !== null) clearTimeout(timerRef.current)
     }
   }, [nodes, childMap, rootId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mirror local state into the shared save-status store so the top-right
+  // SaveStatusIndicator reflects the page canvas alongside chrome edits.
+  useEffect(() => {
+    setSlot('page', { status, lastSavedAt, warning })
+  }, [status, lastSavedAt, warning, setSlot])
+
+  // Remove the slot on unmount so a torn-down editor doesn't leave stale state
+  useEffect(() => () => { clearSlot('page') }, [clearSlot])
 
   return { status, warning, lastSavedAt, saveNow: doSave }
 }

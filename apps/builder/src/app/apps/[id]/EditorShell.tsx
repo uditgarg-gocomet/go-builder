@@ -20,6 +20,7 @@ import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { deserializeSchemaToCanvas } from '@/lib/schema/deserialize'
 import { createNode } from '@/lib/schema/createNode'
+import { remapSubtreeIds, type Subtree } from '@/lib/schema/remapSubtreeIds'
 import type { PageSchema } from '@portal/core'
 import { BuilderCanvas } from '@/components/canvas/BuilderCanvas'
 import { ComponentPanel } from '@/components/panel/ComponentPanel'
@@ -30,11 +31,14 @@ import { SaveStatusIndicator } from '@/components/publish/SaveStatus'
 import { PromoteDialog } from '@/components/publish/PromoteDialog'
 import { VersionHistoryPanel } from '@/components/publish/VersionHistoryPanel'
 import { AppSettingsModal } from '@/components/app-settings/AppSettingsModal'
+import { CanvasJsonPanel } from '@/components/debug/CanvasJsonPanel'
 import { CanvasChrome } from '@/components/layout/CanvasChrome'
 import { HeaderPropsPanel } from '@/components/layout/HeaderPropsPanel'
 import { NavPropsPanel } from '@/components/layout/NavPropsPanel'
+import { PageMenu } from '@/components/layout/PageMenu'
 import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
-import { clientFetch, getCookieToken } from '@/lib/clientFetch'
+import { useSaveStatusStore, mergeSlots } from '@/stores/saveStatusStore'
+import { clientFetch } from '@/lib/clientFetch'
 import type { AppMeta, PageMeta } from '@/types/canvas'
 
 interface EditorShellProps {
@@ -121,11 +125,16 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   const [publishOpen, setPublishOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [appSettingsOpen, setAppSettingsOpen] = useState(false)
-  const [addingPage, setAddingPage] = useState(false)
-  const [newPageName, setNewPageName] = useState('')
+  // The canvas JSON inspector is a right-sidebar view (mutually exclusive with
+  // settings / history / props editor). Toggling it from the header mirrors
+  // the existing pattern for those panels.
+  const [jsonOpen, setJsonOpen] = useState(false)
 
-  // Auto-save
-  const { status: saveStatus, warning: saveWarning, lastSavedAt, saveNow } = useAutoSave(userId)
+  // Auto-save (page canvas). Also writes into useSaveStatusStore so chrome
+  // edits can surface in the same top-right indicator.
+  const { saveNow } = useAutoSave(userId)
+  const saveSlots = useSaveStatusStore(s => s.slots)
+  const mergedSave = mergeSlots(saveSlots)
 
   // Keyboard shortcuts
   useKeyboardShortcuts({ onSave: () => void saveNow() })
@@ -133,6 +142,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   // Drag-and-drop
   const addNode = useCanvasStore(s => s.addNode)
   const moveNode = useCanvasStore(s => s.moveNode)
+  const insertSubtree = useCanvasStore(s => s.insertSubtree)
   const nodes = useCanvasStore(s => s.nodes)
   const rootId = useCanvasStore(s => s.rootId)
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
@@ -163,10 +173,50 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
     const position = overData?.position ?? (useCanvasStore.getState().childMap[parentId]?.length ?? 0)
 
     if (activeData?.source === 'panel' && activeData.type) {
+      const entry = useRegistryStore.getState().entries.find(e => e.name === activeData.type)
+
+      // Prebuilt views are *templates* — dropping one expands its stored node
+      // tree onto the canvas as fresh, independent components. Each drop gets
+      // freshly minted IDs so the same view can be imported multiple times
+      // without collision, and post-import edits don't leak back to the
+      // template.
+      if (entry?.type === 'PREBUILT_VIEW') {
+        const versionDetails = (entry as typeof entry & {
+          currentVersionDetails?: { viewSchema?: unknown }
+        }).currentVersionDetails
+        const raw = versionDetails?.viewSchema as Partial<Subtree> | undefined
+        if (raw && raw.nodes && raw.rootId && raw.childMap) {
+          const remapped = remapSubtreeIds(raw as Subtree)
+          if (!useCanvasStore.getState().rootId) {
+            // Empty canvas: bootstrap by promoting the view's root into the
+            // canvas root, then attach descendants via insertSubtree's
+            // node/childMap merge (parentId of '' is fine — only the merge
+            // path of insertSubtree runs, not the splice into a parent).
+            useCanvasStore.setState(s => ({
+              ...s,
+              nodes: { ...s.nodes, ...remapped.nodes },
+              childMap: { ...s.childMap, ...remapped.childMap },
+              rootId: remapped.rootId,
+            }))
+            // Now wire parentMap for every descendant relationship.
+            useCanvasStore.setState(s => {
+              const parentMap = { ...s.parentMap }
+              for (const [pid, children] of Object.entries(remapped.childMap)) {
+                for (const cid of children) parentMap[cid] = pid
+              }
+              return { ...s, parentMap }
+            })
+          } else {
+            insertSubtree(remapped, parentId, position)
+          }
+          return
+        }
+        // No viewSchema on the entry — fall through to single-node insert.
+      }
+
       // Map the registry entry's component type to the schema's `source`
       // discriminator. Without this every widget / prebuilt view would land
       // as `primitive`, which the renderer's resolver can't dispatch.
-      const entry = useRegistryStore.getState().entries.find(e => e.name === activeData.type)
       const nodeSource: 'primitive' | 'custom_widget' | 'prebuilt_view' =
         entry?.type === 'CUSTOM_WIDGET' ? 'custom_widget'
         : entry?.type === 'PREBUILT_VIEW' ? 'prebuilt_view'
@@ -177,25 +227,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
         moveNode(activeData.nodeId, parentId, position)
       }
     }
-  }, [rootId, addNode, moveNode])
-
-  // Add a new page
-  const handleAddPage = useCallback(async () => {
-    if (!newPageName.trim()) return
-    const slug = newPageName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    try {
-      const page = await clientFetch<PageMeta>(
-        `/apps/${app.id}/pages`,
-        { method: 'POST', body: JSON.stringify({ name: newPageName.trim(), slug, order: pages.length, createdBy: userId }) },
-        getCookieToken(),
-      )
-      if (!page?.id) return
-      usePageStore.getState().addPage(page)
-      setActivePage(page.id)
-      setNewPageName('')
-      setAddingPage(false)
-    } catch { /* non-critical */ }
-  }, [app.id, newPageName, pages.length, userId, setActivePage])
+  }, [rootId, addNode, moveNode, insertSubtree])
 
   const activePage = pages.find(p => p.id === activePageId)
 
@@ -226,68 +258,12 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
 
           <span className="text-muted-foreground/40">›</span>
 
-          {/* Page tabs */}
-          <div className="flex items-center gap-0.5 overflow-x-auto">
-            {pages.map(page => (
-              <button
-                key={page.id}
-                type="button"
-                onClick={() => setActivePage(page.id)}
-                className={`shrink-0 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  activePageId === page.id
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                }`}
-              >
-                {page.name}
-              </button>
-            ))}
-
-            {addingPage ? (
-              <div className="flex items-center gap-1">
-                <input
-                  autoFocus
-                  type="text"
-                  value={newPageName}
-                  onChange={e => setNewPageName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') void handleAddPage()
-                    if (e.key === 'Escape') { setAddingPage(false); setNewPageName('') }
-                  }}
-                  placeholder="Page name"
-                  className="w-28 rounded border border-input bg-background px-2 py-0.5 text-xs outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleAddPage()}
-                  className="rounded px-1.5 py-0.5 text-xs text-primary hover:bg-primary/10"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAddingPage(false); setNewPageName('') }}
-                  className="rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-accent"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAddingPage(true)}
-                className="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                title="Add page"
-              >
-                + Page
-              </button>
-            )}
-          </div>
+          <PageMenu appId={app.id} userId={userId} />
         </div>
 
         {/* Right: save status + actions */}
         <div className="flex shrink-0 items-center gap-2">
-          <SaveStatusIndicator status={saveStatus} warning={saveWarning} lastSavedAt={lastSavedAt} />
+          <SaveStatusIndicator status={mergedSave.status} warning={mergedSave.warning} lastSavedAt={mergedSave.lastSavedAt} />
 
           <div className="h-4 w-px bg-border" />
 
@@ -311,6 +287,17 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             }`}
           >
             History
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setJsonOpen(o => !o)}
+            title="Inspect canvas JSON"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              jsonOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+          >
+            JSON
           </button>
 
           <button
@@ -351,6 +338,8 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             <SettingsSidebar open={settingsOpen} onClose={() => setSettingsOpen(false)} />
           ) : historyOpen ? (
             <VersionHistoryPanel userId={userId} />
+          ) : jsonOpen ? (
+            <CanvasJsonPanel onClose={() => setJsonOpen(false)} />
           ) : (
             <PropsEditor />
           )}

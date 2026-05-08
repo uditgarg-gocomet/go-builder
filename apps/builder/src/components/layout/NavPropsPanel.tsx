@@ -5,9 +5,11 @@ import type { NavConfig, NavItem, PageNavItem, UrlNavItem, CustomNavItem, NavGro
 import { useAppStore, DEFAULT_NAV_CONFIG } from '@/stores/appStore'
 import { usePageStore } from '@/stores/pageStore'
 import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
+import { useSaveStatusStore } from '@/stores/saveStatusStore'
 import { clientFetch } from '@/lib/clientFetch'
 
 const SAVE_DEBOUNCE_MS = 800
+const SAVE_SLOT_KEY = 'chrome:nav'
 
 interface NavPropsPanelProps {
   appId: string
@@ -31,6 +33,7 @@ export function NavPropsPanel({ appId }: NavPropsPanelProps): React.ReactElement
   const setNav = useAppStore(s => s.setNavConfig)
   const updateNav = useAppStore(s => s.updateNavConfig)
   const setItems = useAppStore(s => s.setNavItems)
+  const setSlot = useSaveStatusStore(s => s.setSlot)
 
   const pages = usePageStore(s => s.pages)
   const userGroups = useAppStore(s => s.userGroups)
@@ -44,15 +47,19 @@ export function NavPropsPanel({ appId }: NavPropsPanelProps): React.ReactElement
     if (timerRef.current) clearTimeout(timerRef.current)
     const fingerprint = JSON.stringify(next)
     if (fingerprint === lastSavedRef.current) return
+    setSlot(SAVE_SLOT_KEY, { status: 'saving', lastSavedAt: undefined, warning: undefined })
     timerRef.current = setTimeout(() => {
       void clientFetch(`/apps/${appId}/nav`, {
         method: 'PATCH',
         body: JSON.stringify({ nav: next }),
       }).then(() => {
         lastSavedRef.current = fingerprint
-      }).catch(() => undefined)
+        setSlot(SAVE_SLOT_KEY, { status: 'saved', lastSavedAt: new Date(), warning: undefined })
+      }).catch(() => {
+        setSlot(SAVE_SLOT_KEY, { status: 'error', lastSavedAt: undefined, warning: undefined })
+      })
     }, SAVE_DEBOUNCE_MS)
-  }, [appId])
+  }, [appId, setSlot])
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)

@@ -113,7 +113,7 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     where: { pageId_version: { pageId, version: currentVersionStr } },
     update: {
       schema: schema as unknown as object,
-      diffFromPrev: diffFromPrev !== undefined ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
+      diffFromPrev: diffFromPrev !== null ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
       createdBy: savedBy,
       status: 'DRAFT',
     },
@@ -122,7 +122,7 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
       version: currentVersionStr,
       schema: schema as unknown as object,
       status: 'DRAFT',
-      diffFromPrev: diffFromPrev !== undefined ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
+      diffFromPrev: diffFromPrev !== null ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
       createdBy: savedBy,
     },
   })
@@ -274,8 +274,25 @@ export async function getDraft(pageId: string): Promise<{ schema: object } | nul
     select: { schema: true },
   })
 
-  if (!draft) return null
-  return { schema: draft.schema as object }
+  if (draft) return { schema: draft.schema as object }
+
+  // Fall back to the latest non-ARCHIVED version when no DRAFT exists. This
+  // happens right after a fresh promote — the version that *was* the draft
+  // is now STAGED or PUBLISHED, and the Builder calling GET /schema/:pageId/draft
+  // would otherwise render an empty canvas. Returning the current published
+  // schema lets the FDE pick up editing from the live state; the first save
+  // creates a new DRAFT row (via saveDraft's upsert).
+  const latest = await db.pageVersion.findFirst({
+    where: {
+      pageId,
+      status: { in: ['PUBLISHED', 'STAGED'] },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { schema: true },
+  })
+
+  if (latest) return { schema: latest.schema as object }
+  return null
 }
 
 // ── promoteToStaging ──────────────────────────────────────────────────────────
@@ -351,7 +368,7 @@ async function _promote(
     },
   })
 
-  // Link version to deployment
+  // Link the just-promoted version
   await db.deploymentPage.create({
     data: {
       deploymentId: deployment.id,
@@ -359,40 +376,169 @@ async function _promote(
     },
   })
 
-  // Fire build webhook and update to BUILDING, then SUCCESS.
-  //
-  // POC note: the Renderer in this POC reads schemas at request time with
-  // `cache: 'no-store'` (see apps/renderer/src/app/[appSlug]/[pageSlug]/page.tsx),
-  // so there is no actual CI build to wait for. The build webhook in this POC
-  // only triggers an on-demand revalidation of static paths — it completes
-  // quickly and doesn't call back to the backend to report status.
-  //
-  // The deployment query used by the Renderer (`getDeployment`) requires
-  // `buildStatus = 'SUCCESS'`. If we leave deployments stuck at BUILDING, the
-  // Renderer gets a 404 for every newly-promoted app. We therefore transition
-  // PENDING → BUILDING → SUCCESS right after the webhook returns.
-  //
-  // Post-POC, when CI actually builds per-tenant Docker images, the status
-  // should only become SUCCESS when the webhook receiver (or CI itself) calls
-  // `PATCH /apps/deployments/:id/status` to report a completed build.
-  triggerBuild(versionId, environment, deployment.id).then(async () => {
+  // Carry forward the latest live version of every other page in the app so
+  // the new Deployment is a complete snapshot of what's live in this env.
+  // Without this, the Renderer's `getDeployment` (which reads only the
+  // latest deployment's pages) would 404 for any page not promoted in this
+  // call. Per spec, publish remains per-page; the deployment row just has
+  // to stay self-contained.
+  await linkCarryForwardPages(deployment.id, version.page.appId, [version.pageId], environment)
+
+  fireDeploymentBuild(versionId, environment, deployment.id)
+
+  return { deploymentId: deployment.id, version: bumped }
+}
+
+// ── promoteApp (publish-all) ──────────────────────────────────────────────────
+// Promotes every eligible page in the app in one shot, creating a single
+// Deployment that lists all of them. Pages without a candidate (e.g. no DRAFT
+// when promoting to staging) are still carried forward at their current live
+// version so existing URLs keep working.
+export async function promoteApp(
+  appId: string,
+  environment: 'STAGING' | 'PRODUCTION',
+  request: PromoteRequest
+): Promise<{ deploymentId: string; promotedCount: number }> {
+  const { bumpType, changelog, promotedBy } = request
+  const sourceStatus = environment === 'STAGING' ? 'DRAFT' : 'STAGED'
+  const targetStatus = environment === 'STAGING' ? 'STAGED' : 'PUBLISHED'
+
+  const allPages = await db.page.findMany({
+    where: { appId },
+    select: { id: true },
+  })
+  if (allPages.length === 0) {
+    throw Object.assign(new Error('App has no pages to publish'), { statusCode: 400 })
+  }
+
+  // Pick the candidate (latest source-status row) per page.
+  const candidates: Array<{ pageId: string; versionId: string; currentVersion: string }> = []
+  for (const p of allPages) {
+    const candidate = await db.pageVersion.findFirst({
+      where: { pageId: p.id, status: sourceStatus },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, version: true },
+    })
+    if (candidate) {
+      candidates.push({ pageId: p.id, versionId: candidate.id, currentVersion: candidate.version })
+    }
+  }
+
+  if (candidates.length === 0) {
+    throw Object.assign(
+      new Error(`No ${sourceStatus} versions found to promote to ${environment}`),
+      { statusCode: 409 }
+    )
+  }
+
+  const promotedAt = new Date()
+  const promotedVersionIds: string[] = []
+  for (const c of candidates) {
+    const bumped = semver.inc(c.currentVersion, bumpType)
+    if (!bumped) continue
+    await db.pageVersion.update({
+      where: { id: c.versionId },
+      data: {
+        status: targetStatus,
+        version: bumped,
+        changelog,
+        promotedAt,
+        promotedBy,
+      },
+    })
+    promotedVersionIds.push(c.versionId)
+  }
+
+  const deployment = await db.deployment.create({
+    data: { appId, environment, buildStatus: 'PENDING', deployedBy: promotedBy },
+  })
+
+  for (const pvid of promotedVersionIds) {
+    await db.deploymentPage.create({
+      data: { deploymentId: deployment.id, pageVersionId: pvid },
+    })
+  }
+
+  // Carry-forward for pages we didn't promote in this call.
+  const promotedPageIds = candidates.map(c => c.pageId)
+  await linkCarryForwardPages(deployment.id, appId, promotedPageIds, environment)
+
+  // Use the first promoted version as the webhook reference. The webhook
+  // payload is a single pageVersionId; for a multi-page deployment any of
+  // them is fine since the Renderer reads the deployment row, not the
+  // individual page version.
+  const ref = promotedVersionIds[0]
+  if (ref) fireDeploymentBuild(ref, environment, deployment.id)
+
+  return { deploymentId: deployment.id, promotedCount: promotedVersionIds.length }
+}
+
+// ── carry-forward helper ──────────────────────────────────────────────────────
+async function linkCarryForwardPages(
+  deploymentId: string,
+  appId: string,
+  excludePageIds: string[],
+  environment: 'STAGING' | 'PRODUCTION'
+): Promise<void> {
+  const targetStatus = environment === 'STAGING' ? 'STAGED' : 'PUBLISHED'
+  const otherPages = await db.page.findMany({
+    where: { appId, id: { notIn: excludePageIds } },
+    select: { id: true },
+  })
+
+  for (const p of otherPages) {
+    const live = await db.pageVersion.findFirst({
+      where: { pageId: p.id, status: targetStatus },
+      orderBy: { promotedAt: 'desc' },
+      select: { id: true },
+    })
+    if (live) {
+      await db.deploymentPage.create({
+        data: { deploymentId, pageVersionId: live.id },
+      })
+    }
+  }
+}
+
+// ── deployment build trigger ──────────────────────────────────────────────────
+//
+// Fire build webhook and update to BUILDING, then SUCCESS.
+//
+// POC note: the Renderer in this POC reads schemas at request time with
+// `cache: 'no-store'` (see apps/renderer/src/app/[appSlug]/[pageSlug]/page.tsx),
+// so there is no actual CI build to wait for. The build webhook in this POC
+// only triggers an on-demand revalidation of static paths — it completes
+// quickly and doesn't call back to the backend to report status.
+//
+// The deployment query used by the Renderer (`getDeployment`) requires
+// `buildStatus = 'SUCCESS'`. If we leave deployments stuck at BUILDING, the
+// Renderer gets a 404 for every newly-promoted app. We therefore transition
+// PENDING → BUILDING → SUCCESS right after the webhook returns.
+//
+// Post-POC, when CI actually builds per-tenant Docker images, the status
+// should only become SUCCESS when the webhook receiver (or CI itself) calls
+// `PATCH /apps/deployments/:id/status` to report a completed build.
+function fireDeploymentBuild(
+  pageVersionId: string,
+  environment: 'STAGING' | 'PRODUCTION',
+  deploymentId: string,
+): void {
+  triggerBuild(pageVersionId, environment, deploymentId).then(async () => {
     await db.deployment.update({
-      where: { id: deployment.id },
+      where: { id: deploymentId },
       data: { buildStatus: 'BUILDING' },
     })
     await db.deployment.update({
-      where: { id: deployment.id },
+      where: { id: deploymentId },
       data: { buildStatus: 'SUCCESS' },
     })
   }).catch(async err => {
-    logger.error({ err, deploymentId: deployment.id }, 'Build webhook failed')
+    logger.error({ err, deploymentId }, 'Build webhook failed')
     await db.deployment.update({
-      where: { id: deployment.id },
+      where: { id: deploymentId },
       data: { buildStatus: 'FAILED' },
     }).catch(() => undefined)
   })
-
-  return { deploymentId: deployment.id, version: bumped }
 }
 
 // ── rollback ──────────────────────────────────────────────────────────────────
