@@ -43,6 +43,14 @@ interface AppStore {
   setIdProviders: (providers: AppIdentityProvider[]) => void
   setUserGroups: (groups: AppUserGroup[]) => void
 
+  // Bulk setters — used when loading a page's full schema into the store.
+  // Replace the whole list in one shot to avoid race conditions with
+  // auto-save while switching pages.
+  setDataSources: (ds: DataSourceDef[]) => void
+  setActions: (actions: ActionDef[]) => void
+  setForms: (forms: FormDef[]) => void
+  setStateSlots: (slots: StateSlotDef[]) => void
+
   // Chrome setters
   setHeaderConfig: (header: HeaderConfig | null) => void
   updateHeaderConfig: (updates: Partial<HeaderConfig>) => void
@@ -117,6 +125,11 @@ export const useAppStore = create<AppStore>()((set) => ({
 
   setIdProviders: (providers) => set({ idProviders: providers }),
   setUserGroups: (groups) => set({ userGroups: groups }),
+
+  setDataSources: (ds) => set({ dataSources: ds }),
+  setActions: (actions) => set({ actions }),
+  setForms: (forms) => set({ forms }),
+  setStateSlots: (slots) => set({ stateSlots: slots }),
 
   setHeaderConfig: (header) => set({ headerConfig: header }),
   updateHeaderConfig: (updates) => set(produce<AppStore>(s => {

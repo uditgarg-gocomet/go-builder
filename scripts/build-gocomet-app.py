@@ -39,6 +39,24 @@ NAV_TO_SHIPMENTS_ID = "act_nav_to_shipments"
 NAV_TO_DETAIL_ID    = "act_nav_to_detail"
 APPROVE_ALL_ID      = "act_approve_all"
 
+# Row-action ids for the mandatory-documents table. `view` opens the DRDV
+# widget inside a Modal; the other four gate on ops_admin both at render
+# time (DataTable.rowActions[].requireGroups) and at execution
+# (ActionDef.requireGroups).
+DOC_VIEW_ID     = "act_doc_view"
+DOC_UPLOAD_ID   = "act_doc_upload"
+DOC_DELETE_ID   = "act_doc_delete"
+DOC_REFRESH_ID  = "act_doc_refresh"
+DOC_BLOCK_ID    = "act_doc_block"
+
+# DRDV modal wiring. Approve / reject each run a toast + close-modal
+# sequence; close-modal flips the state slot that gates `Modal.open`.
+DRDV_APPROVE_ID         = "act_drdv_approve"
+DRDV_REJECT_ID          = "act_drdv_reject"
+DRDV_APPROVE_TOAST_ID   = "act_drdv_approve_toast"
+DRDV_REJECT_TOAST_ID    = "act_drdv_reject_toast"
+DRDV_MODAL_CLOSE_ID     = "act_drdv_modal_close"
+
 
 # ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +92,181 @@ def _approve_all() -> dict:
         },
         "requireGroups": ["ops_admin"],
     }
+
+
+# ── Document row actions ────────────────────────────────────────────────────
+# View (always available) and four admin-only actions. `requireGroups` gates
+# execution; DataTable's rowActions list gates render so viewers don't even
+# see the admin icons.
+
+def _doc_view_set_id() -> dict:
+    return {
+        "id":   "act_doc_view_set_id",
+        "name": "Stash clicked doc id",
+        "type": "SET_STATE",
+        "config": {"key": "selectedDocId", "value": "{{event.name}}"},
+    }
+
+
+def _doc_view_open() -> dict:
+    return {
+        "id":   "act_doc_view_open",
+        "name": "Open DRDV modal",
+        "type": "SET_STATE",
+        "config": {"key": "isDrdvModalOpen", "value": True},
+    }
+
+
+def _doc_view() -> dict:
+    return {
+        "id":   DOC_VIEW_ID,
+        "name": "Open document review",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": ["act_doc_view_set_id", "act_doc_view_open"],
+            "stopOnError": False,
+        },
+    }
+
+
+def _doc_upload() -> dict:
+    return {
+        "id":   DOC_UPLOAD_ID,
+        "name": "Upload document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Upload started",
+            "description": "Uploading for {{event.name}}…",
+            "variant": "info",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_delete() -> dict:
+    return {
+        "id":   DOC_DELETE_ID,
+        "name": "Delete document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Deleted",
+            "description": "{{event.name}} removed from the queue.",
+            "variant": "warning",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_refresh() -> dict:
+    return {
+        "id":   DOC_REFRESH_ID,
+        "name": "Refresh document",
+        "type": "REFRESH_DATASOURCE",
+        "config": {"alias": "mandatoryDocs"},
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_block() -> dict:
+    return {
+        "id":   DOC_BLOCK_ID,
+        "name": "Skip document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Skipped",
+            "description": "{{event.name}} marked as skipped.",
+            "variant": "info",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+# ── DRDV modal actions ──────────────────────────────────────────────────────
+
+def _drdv_approve_toast() -> dict:
+    return {
+        "id":   DRDV_APPROVE_TOAST_ID,
+        "name": "DRDV approve toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Document approved",
+            "description": "{{event.documentBucketId}} has been approved.",
+            "variant": "success",
+        },
+    }
+
+
+def _drdv_reject_toast() -> dict:
+    return {
+        "id":   DRDV_REJECT_TOAST_ID,
+        "name": "DRDV reject toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Document rejected",
+            "description": "{{event.documentBucketId}} has been rejected.",
+            "variant": "warning",
+        },
+    }
+
+
+def _drdv_modal_close() -> dict:
+    return {
+        "id":   DRDV_MODAL_CLOSE_ID,
+        "name": "Close DRDV modal",
+        "type": "SET_STATE",
+        "config": {"key": "isDrdvModalOpen", "value": False},
+    }
+
+
+def _drdv_approve() -> dict:
+    return {
+        "id":   DRDV_APPROVE_ID,
+        "name": "Handle DRDV approve",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": [DRDV_APPROVE_TOAST_ID, DRDV_MODAL_CLOSE_ID],
+            "stopOnError": False,
+        },
+    }
+
+
+def _drdv_reject() -> dict:
+    return {
+        "id":   DRDV_REJECT_ID,
+        "name": "Handle DRDV reject",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": [DRDV_REJECT_TOAST_ID, DRDV_MODAL_CLOSE_ID],
+            "stopOnError": False,
+        },
+    }
+
+
+DOC_ACTION_IDS = {
+    "view":    DOC_VIEW_ID,
+    "upload":  DOC_UPLOAD_ID,
+    "delete":  DOC_DELETE_ID,
+    "refresh": DOC_REFRESH_ID,
+    "block":   DOC_BLOCK_ID,
+}
+
+
+def _detail_actions() -> list[dict]:
+    return [
+        _approve_all(),
+        _doc_view(), _doc_view_set_id(), _doc_view_open(),
+        _doc_upload(), _doc_delete(), _doc_refresh(), _doc_block(),
+        _drdv_approve(), _drdv_approve_toast(),
+        _drdv_reject(), _drdv_reject_toast(),
+        _drdv_modal_close(),
+    ]
+
+
+def _detail_state() -> list[dict]:
+    return [
+        {"name": "isDrdvModalOpen", "type": "boolean", "defaultValue": False},
+        {"name": "selectedDocId",   "type": "string",  "defaultValue": ""},
+    ]
 
 
 # ── Data sources ────────────────────────────────────────────────────────────
@@ -225,7 +418,8 @@ def apply_chrome(token: str, app_id: str) -> None:
 # ── Schema savers ───────────────────────────────────────────────────────────
 
 def save_schema(token: str, app_id: str, page_id: str, page_name: str, page_slug: str,
-                order: int, layout: dict, actions: list, data_sources: list) -> str:
+                order: int, layout: dict, actions: list, data_sources: list,
+                state: list | None = None) -> str:
     schema = {
         "pageId": page_id,
         "appId":  app_id,
@@ -240,7 +434,7 @@ def save_schema(token: str, app_id: str, page_id: str, page_name: str, page_slug
         "dataSources": data_sources,
         "actions":     actions,
         "forms":       [],
-        "state":       [],
+        "state":       state or [],
         "theme":       THEME,
         "params":      [
             {"name": "id",     "type": "string", "required": False},
@@ -305,9 +499,16 @@ def main() -> None:
     )
     det_version   = save_schema(
         token, app_id, detail_id, "Shipment Detail", "shipment-detail", 2,
-        build_detail_layout(APPROVE_ALL_ID),
-        [_approve_all()],
+        build_detail_layout(
+            APPROVE_ALL_ID,
+            DOC_ACTION_IDS,
+            DRDV_APPROVE_ID,
+            DRDV_REJECT_ID,
+            DRDV_MODAL_CLOSE_ID,
+        ),
+        _detail_actions(),
         _detail_sources(),
+        state=_detail_state(),
     )
     print(f"  ✓ home v = {home_version}")
     print(f"  ✓ shipments v = {ship_version}")

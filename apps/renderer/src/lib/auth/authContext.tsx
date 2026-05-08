@@ -153,9 +153,24 @@ export function AuthProvider({
     const url = appSlug
       ? `/api/auth/logout?appSlug=${encodeURIComponent(appSlug)}`
       : '/api/auth/logout'
-    await fetch(url, { method: 'POST' })
+    // Call server to revoke session + clear cookies. The route responds
+    // with a redirect, but since this runs via fetch() the browser won't
+    // navigate — we do the navigation explicitly below.
+    // `redirect: 'manual'` prevents fetch from following the 3xx and
+    // fetching the login page HTML we don't need.
+    try {
+      await fetch(url, { method: 'POST', redirect: 'manual' })
+    } catch {
+      // Ignore — we still want to clear local state and navigate.
+    }
     setSessionToken(null)
     setBaseUser(null)
+    // Hard navigation to the login page so server components re-read the
+    // (now cleared) cookies and middleware re-evaluates auth state.
+    if (typeof window !== 'undefined') {
+      const loginPath = appSlug ? `/${appSlug}/login` : '/login'
+      window.location.assign(loginPath)
+    }
   }
 
   return (

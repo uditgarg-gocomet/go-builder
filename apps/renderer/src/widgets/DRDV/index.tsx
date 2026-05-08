@@ -65,6 +65,17 @@ export type DRDVConfig = z.infer<typeof DRDVConfigSchema>
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
+export interface DRDVApprovePayload {
+  documentId: string | undefined
+  documentName: string | undefined
+  edits: Record<string, string>
+}
+
+export interface DRDVRejectPayload {
+  documentId: string | undefined
+  documentName: string | undefined
+}
+
 export interface DRDVProps {
   documents?: DRDVDocument[]
   config?: Partial<DRDVConfig>
@@ -74,6 +85,11 @@ export interface DRDVProps {
   // the exact emit name if it wants to.
   approveEventName?: string
   rejectEventName?: string
+  // Action-binding triggers. Fire alongside the eventBus emit so the page
+  // schema can wire them via `actions: [{ trigger: 'onApprove', actionId: … }]`.
+  // Payload is identical to the eventBus emit's data.
+  onApprove?: (payload: DRDVApprovePayload) => void
+  onReject?: (payload: DRDVRejectPayload) => void
 }
 
 // ── Permissions helpers ──────────────────────────────────────────────────────
@@ -155,19 +171,23 @@ export function DRDV(props: DRDVProps): React.ReactElement {
 
   function onApprove(): void {
     if (!approveEnabled) return
-    eventBus.emit(approveEventName, {
+    const payload: DRDVApprovePayload = {
       documentId: selected?.id,
       documentName: selected?.name,
       edits,
-    })
+    }
+    eventBus.emit(approveEventName, payload)
+    props.onApprove?.(payload)
   }
 
   function onReject(): void {
     if (!rejectEnabled) return
-    eventBus.emit(rejectEventName, {
+    const payload: DRDVRejectPayload = {
       documentId: selected?.id,
       documentName: selected?.name,
-    })
+    }
+    eventBus.emit(rejectEventName, payload)
+    props.onReject?.(payload)
   }
 
   return (

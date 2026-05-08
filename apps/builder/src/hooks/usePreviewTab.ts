@@ -5,7 +5,6 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { usePageStore } from '@/stores/pageStore'
 import { useAppStore } from '@/stores/appStore'
 import { serializeCanvasToSchema } from '@/lib/schema/serialize'
-import { clientFetch } from '@/lib/clientFetch'
 import type { DataSourceDef } from '@portal/core'
 
 // Opens a new-tab preview of the current page using the in-memory canvas
@@ -75,20 +74,24 @@ export function usePreviewTab(): PreviewResult {
       // the preview is inherently static.
       const mockData = extractMockDatasourceMap(dataSources)
 
-      // Persist the session. /api/preview/create writes to Redis with a 1h
-      // TTL and returns a short token.
-      const { previewToken } = await clientFetch<{ previewToken: string }>(
-        '/api/preview/create',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            appId: app.id,
-            pageId: activePageId,
-            schema,
-            mockData,
-          }),
-        },
-      )
+      // Persist the session. /api/preview/create is a Next.js API route on
+      // the Builder itself (not the Core Backend), so we hit it with a plain
+      // same-origin fetch rather than clientFetch (which targets the backend).
+      const res = await fetch('/api/preview/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: app.id,
+          pageId: activePageId,
+          schema,
+          mockData,
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Failed to create preview session (${res.status}): ${text}`)
+      }
+      const { previewToken } = (await res.json()) as { previewToken: string }
 
       // Open in a new tab. noopener keeps the preview tab isolated.
       if (typeof window !== 'undefined') {
