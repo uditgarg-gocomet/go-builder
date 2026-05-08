@@ -102,13 +102,20 @@ export async function saveDraft(request: SaveDraftRequest): Promise<SaveDraftRes
     }
   }
 
-  // Upsert the DRAFT for this (pageId, version) pair so repeated saves don't conflict
+  // Upsert the DRAFT for this (pageId, version) pair so repeated saves don't conflict.
+  // Critically: the `update` branch resets status to 'DRAFT'. Without this,
+  // editing a previously-promoted page silently overwrites the STAGED row's
+  // schema in place but leaves status='STAGED', so PromoteDialog never finds
+  // a DRAFT to promote. The deployed schema is unaffected (it lives in the
+  // Deployment table); flipping status to DRAFT just makes the version
+  // history honest about the fact that the row has been edited.
   const newVersion = await db.pageVersion.upsert({
     where: { pageId_version: { pageId, version: currentVersionStr } },
     update: {
       schema: schema as unknown as object,
       diffFromPrev: diffFromPrev !== undefined ? (diffFromPrev as Prisma.InputJsonValue) : Prisma.JsonNull,
       createdBy: savedBy,
+      status: 'DRAFT',
     },
     create: {
       pageId,

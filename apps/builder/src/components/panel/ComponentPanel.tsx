@@ -5,15 +5,28 @@ import { useDraggable } from '@dnd-kit/core'
 import { useRegistryStore } from '@/stores/registryStore'
 import type { RegistryEntry } from '@portal/core'
 
-const CATEGORIES = ['Layout', 'Data', 'Input', 'Action', 'Feedback', 'Typography', 'Display']
+const CATEGORIES = ['Layout', 'Data', 'Input', 'Action', 'Feedback', 'Typography', 'Display', 'Wired']
+
+// The /registry/entries API returns `currentVersionDetails` (single), but the
+// shared RegistryEntry type still declares `versions?: []`. Read both so
+// either runtime shape works.
+function pickVersion(entry: RegistryEntry): { displayName?: string; category?: string } | null {
+  const e = entry as RegistryEntry & {
+    currentVersionDetails?: { displayName?: string; category?: string }
+  }
+  if (e.currentVersionDetails) return e.currentVersionDetails
+  if (e.versions && e.versions.length > 0) {
+    return e.versions.find(v => v.version === e.currentVersion) ?? e.versions[0] ?? null
+  }
+  return null
+}
 
 interface ComponentTileProps {
   entry: RegistryEntry
 }
 
 function ComponentTile({ entry }: ComponentTileProps): React.ReactElement {
-  const currentVersion = entry.currentVersion
-  const version = entry.versions?.find(v => v.version === currentVersion)
+  const version = pickVersion(entry)
   const displayName = version?.displayName ?? entry.name
   const category = version?.category ?? ''
 
@@ -47,8 +60,7 @@ export function ComponentPanel(): React.ReactElement {
 
   const filtered = useMemo(() => {
     return entries.filter(entry => {
-      const currentVersion = entry.currentVersion
-      const version = entry.versions?.find(v => v.version === currentVersion)
+      const version = pickVersion(entry)
       const displayName = version?.displayName ?? entry.name
       const category = version?.category ?? ''
 

@@ -790,6 +790,56 @@ const primitives: PrimitiveDefinition[] = [
   },
 ]
 
+// ── Built-in widgets ──────────────────────────────────────────────────────────
+// Bundled with the renderer (see apps/renderer/src/widgets/*) — sourceType
+// stays INTERNAL because nothing's fetched at runtime. Adding an entry here
+// makes the widget appear in the builder palette under its category.
+const widgets: PrimitiveDefinition[] = [
+  {
+    name: 'CancelShipmentModal',
+    displayName: 'Cancel Shipment Modal',
+    description:
+      'Modal that captures cancellation reason + optional remarks. Phase A: mock-only with toggleable success / failure. Emits cancel-shipment:success | :error | :cancel.',
+    category: 'Wired',
+    icon: 'x-circle',
+    tags: ['modal', 'cancel', 'shipment', 'wired', 'workflow'],
+    propsSchema: {
+      type: 'object',
+      properties: {
+        open: { type: 'boolean', default: false },
+        workflowId: { type: 'string', default: '' },
+        apiMode: {
+          type: 'string',
+          enum: ['mock', 'real'],
+          default: 'mock',
+        },
+        mockMode: {
+          type: 'string',
+          enum: ['success', 'failure'],
+          default: 'success',
+        },
+        mockDelayMs: { type: 'number', minimum: 0, default: 800 },
+        successEventName: {
+          type: 'string',
+          default: 'cancel-shipment:success',
+        },
+        errorEventName: { type: 'string', default: 'cancel-shipment:error' },
+        cancelEventName: { type: 'string', default: 'cancel-shipment:cancel' },
+      },
+    },
+    defaultProps: {
+      open: true,
+      workflowId: 'WF-DEMO-1',
+      apiMode: 'mock',
+      mockMode: 'success',
+      mockDelayMs: 800,
+      successEventName: 'cancel-shipment:success',
+      errorEventName: 'cancel-shipment:error',
+      cancelEventName: 'cancel-shipment:cancel',
+    },
+  },
+]
+
 async function seed() {
   console.log('Seeding component registry...')
 
@@ -837,8 +887,49 @@ async function seed() {
     created++
   }
 
+  for (const widget of widgets) {
+    const existing = await prisma.registryEntry.findFirst({
+      where: { name: widget.name, scope: 'COMMON' },
+    })
+
+    if (existing) {
+      skipped++
+      continue
+    }
+
+    const entry = await prisma.registryEntry.create({
+      data: {
+        name: widget.name,
+        type: 'CUSTOM_WIDGET',
+        scope: 'COMMON',
+        status: 'ACTIVE',
+        currentVersion: '1.0.0',
+        sourceType: 'INTERNAL',
+        ownedBy: 'platform',
+        createdBy: 'seed',
+      },
+    })
+
+    await prisma.registryEntryVersion.create({
+      data: {
+        entryId: entry.id,
+        version: '1.0.0',
+        propsSchema: widget.propsSchema as Prisma.InputJsonValue,
+        defaultProps: widget.defaultProps as Prisma.InputJsonValue,
+        displayName: widget.displayName,
+        description: widget.description,
+        category: widget.category,
+        icon: widget.icon,
+        tags: widget.tags,
+        publishedBy: 'seed',
+      },
+    })
+
+    created++
+  }
+
   console.log(`Registry seeded: ${created} created, ${skipped} already exist`)
-  console.log(`Total primitives: ${primitives.length}`)
+  console.log(`Total primitives: ${primitives.length}, widgets: ${widgets.length}`)
 }
 
 seed()

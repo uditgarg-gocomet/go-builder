@@ -4,13 +4,37 @@ import React from 'react'
 import { z } from 'zod'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useRegistryStore } from '@/stores/registryStore'
+import { isJsonSchemaObject, jsonSchemaToZodShape } from '@/lib/jsonSchemaToZod'
 import { PropField } from './PropField'
 import { ActionsEditor } from './ActionsEditor'
 import { StyleEditor } from './StyleEditor'
 
 function getZodShape(schema: unknown): Record<string, z.ZodTypeAny> | null {
+  // Legacy: in-memory Zod object (kept for any caller still passing one).
   if (schema && typeof schema === 'object' && 'shape' in schema) {
     return (schema as z.ZodObject<z.ZodRawShape>).shape as Record<string, z.ZodTypeAny>
+  }
+  // Registry rows store JSON Schema — bridge it to Zod so PropField stays
+  // unchanged.
+  if (isJsonSchemaObject(schema)) {
+    return jsonSchemaToZodShape(schema)
+  }
+  return null
+}
+
+// The /registry/entries API returns `currentVersionDetails` (single), but the
+// shared RegistryEntry type still declares `versions?: []`. Read both so
+// either runtime shape works.
+function pickVersionDetails(entry: unknown): { propsSchema?: unknown } | null {
+  if (!entry || typeof entry !== 'object') return null
+  const e = entry as {
+    currentVersion?: string
+    currentVersionDetails?: { propsSchema?: unknown }
+    versions?: Array<{ version: string; propsSchema?: unknown }>
+  }
+  if (e.currentVersionDetails) return e.currentVersionDetails
+  if (e.versions && e.versions.length > 0) {
+    return e.versions.find(v => v.version === e.currentVersion) ?? e.versions[0] ?? null
   }
   return null
 }
@@ -29,8 +53,7 @@ export function PropsEditor(): React.ReactElement {
   }
 
   const entry = entries.find(e => e.name === node.type)
-  const currentVersion = entry?.currentVersion
-  const versionEntry = entry?.versions?.find(v => v.version === currentVersion)
+  const versionEntry = pickVersionDetails(entry)
   const propsSchema = versionEntry?.propsSchema
   const shape = getZodShape(propsSchema)
 

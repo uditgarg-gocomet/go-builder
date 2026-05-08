@@ -18,6 +18,7 @@
     "@portal/action-runtime": "workspace:*",
     "@portal/core": "workspace:*",
     "@portal/ui": "workspace:*",
+    "@portal/widgets": "workspace:*",
     "@sentry/nextjs": "^8.40.0",
     "@tiptap/extension-document": "^2.10.3",
     "@tiptap/extension-paragraph": "^2.10.3",

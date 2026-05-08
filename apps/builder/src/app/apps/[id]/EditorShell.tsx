@@ -163,7 +163,15 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
     const position = overData?.position ?? (useCanvasStore.getState().childMap[parentId]?.length ?? 0)
 
     if (activeData?.source === 'panel' && activeData.type) {
-      addNode(activeData.type, 'primitive', parentId, position, createNode(activeData.type, 'primitive'))
+      // Map the registry entry's component type to the schema's `source`
+      // discriminator. Without this every widget / prebuilt view would land
+      // as `primitive`, which the renderer's resolver can't dispatch.
+      const entry = useRegistryStore.getState().entries.find(e => e.name === activeData.type)
+      const nodeSource: 'primitive' | 'custom_widget' | 'prebuilt_view' =
+        entry?.type === 'CUSTOM_WIDGET' ? 'custom_widget'
+        : entry?.type === 'PREBUILT_VIEW' ? 'prebuilt_view'
+        : 'primitive'
+      addNode(activeData.type, nodeSource, parentId, position, createNode(activeData.type, nodeSource, entry))
     } else if (activeData?.source === 'canvas' && activeData.nodeId) {
       if (activeData.nodeId !== parentId) {
         moveNode(activeData.nodeId, parentId, position)

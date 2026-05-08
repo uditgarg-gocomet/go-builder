@@ -46,6 +46,11 @@ import {
 // to `BUILT_IN_WIDGETS` below.
 import { DRDV, drdvManifest } from '../../widgets/DRDV/index.js'
 
+// Wired widgets shipped from the @portal/widgets package. Component map and
+// per-widget manifests both come from the package's `/registry` entrypoint
+// — adding a widget there automatically surfaces it here.
+import { WIDGET_MAP, MANIFEST_MAP } from '@portal/widgets/registry'
+
 type ComponentType = React.ComponentType<Record<string, unknown>>
 
 const PRIMITIVES: Record<string, ComponentType> = {
@@ -94,6 +99,7 @@ const widgetCache = new Map<string, ComponentType>()
 // immediately.
 const BUILT_IN_WIDGETS: Record<string, ComponentType> = {
   DRDV: DRDV as ComponentType,
+  ...(WIDGET_MAP as Record<string, ComponentType>),
 }
 for (const [name, comp] of Object.entries(BUILT_IN_WIDGETS)) {
   widgetCache.set(name, comp)
@@ -106,6 +112,12 @@ for (const [name, comp] of Object.entries(BUILT_IN_WIDGETS)) {
 // definition cannot override internals of a registered widget.
 const WIDGET_PROP_ALLOWLIST: Record<string, Set<string>> = {
   DRDV: new Set(Object.keys(drdvManifest.propsShape)),
+  ...Object.fromEntries(
+    Object.entries(MANIFEST_MAP).map(([name, m]) => [
+      name,
+      new Set(Object.keys(m.propsShape)),
+    ]),
+  ),
 }
 
 export function filterWidgetProps(
