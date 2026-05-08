@@ -2,25 +2,30 @@
 // Anything outside this folder imports from here. Keeping the barrel
 // exhaustive lets us reorganise internals freely without breaking consumers.
 
-export { CancelShipmentModal, default } from './Container.js'
+export { CancelShipmentModal, default } from './ui/Container.js'
+
 export {
   cancelShipmentModalManifest,
   cancelShipmentModalPropsSchema,
-} from './manifest.js'
+} from './manifest/manifest.js'
+
 export {
   CANCEL_SHIPMENT_ENDPOINT,
   submitCancellation,
-} from './service.js'
+} from './logic/service.js'
+
 export {
   CANCEL_REASONS,
   DEFAULTS as CANCEL_SHIPMENT_DEFAULTS,
-} from './constants.js'
+} from './shared/constants.js'
+
 export {
   EVENTS as CANCEL_SHIPMENT_EVENTS,
   type CancelShipmentSuccessPayload,
   type CancelShipmentErrorPayload,
   type CancelShipmentCancelPayload,
-} from './events.js'
+} from './shared/events.js'
+
 export type {
   CancelShipmentModalProps,
   CancelShipmentPayload,
@@ -29,4 +34,4 @@ export type {
   CancelShipmentSuccessEventPayload,
   CancelShipmentErrorEventPayload,
   CancelShipmentCloseEventPayload,
-} from './types.js'
+} from './shared/types.js'

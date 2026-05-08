@@ -6,8 +6,8 @@
 
 import React from 'react'
 import { Modal, Select, Textarea, Button } from '@portal/ui'
-import { CANCEL_REASONS, COPY } from './constants.js'
-import type { CancelShipmentModalViewModel } from './hook.js'
+import { CANCEL_REASONS, COPY } from '../shared/constants.js'
+import type { CancelShipmentModalViewModel } from '../logic/hook.js'
 
 export interface CancelShipmentModalViewProps {
   open: boolean

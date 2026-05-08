@@ -1,32 +1,15 @@
 // ── @portal/widgets ──────────────────────────────────────────────────────────
-// Wired widgets — self-contained React components with their own internal
-// state, mocked or live API contracts, and a typed event surface for action
-// binding. Each widget exports a component + a manifest. The renderer pulls
-// in the WIDGET_MAP / MANIFEST_MAP barrels from `@portal/widgets/registry`
-// and registers them via the existing custom_widget source type.
+// Wired widgets — self-contained React components with internal state, a
+// switchable mock-vs-real API path, and a typed event surface for action
+// binding.
 //
-// Add new widgets by:
-//   1. Creating src/<WidgetName>/index.tsx that exports `<WidgetName>` + `<widgetName>Manifest`
-//   2. Re-exporting from this file
-//   3. Adding the entry to src/registry.ts
+// Widgets are grouped by product vertical:
+//   src/goShipment/      ← cancel, track, document-review, etc.
+//   src/<nextVertical>/  ← future verticals follow the same shape
+//
+// Add a new widget by:
+//   1. Creating <Vertical>/<WidgetName>/{ui,logic,api,manifest,shared}/...
+//   2. Re-exporting from <Vertical>/index.ts
+//   3. The vertical's exports are picked up here automatically.
 
-export {
-  CancelShipmentModal,
-  cancelShipmentModalManifest,
-  cancelShipmentModalPropsSchema,
-  CANCEL_SHIPMENT_ENDPOINT,
-  CANCEL_REASONS,
-  CANCEL_SHIPMENT_DEFAULTS,
-  CANCEL_SHIPMENT_EVENTS,
-  submitCancellation,
-  type CancelShipmentModalProps,
-  type CancelShipmentPayload,
-  type CancelShipmentResult,
-  type CancelReason,
-  type CancelShipmentSuccessPayload,
-  type CancelShipmentErrorPayload,
-  type CancelShipmentCancelPayload,
-  type CancelShipmentSuccessEventPayload,
-  type CancelShipmentErrorEventPayload,
-  type CancelShipmentCloseEventPayload,
-} from './CancelShipmentModal/index.js'
+export * from './goShipment/index.js'

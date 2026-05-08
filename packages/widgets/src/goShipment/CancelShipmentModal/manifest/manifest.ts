@@ -15,7 +15,7 @@ export const cancelShipmentModalManifest = {
   name: 'CancelShipmentModal',
   version: '1.0.0',
   displayName: 'Cancel Shipment Modal',
-  category: 'Wired',
+  category: 'Widget',
   description:
     'Modal that captures cancellation reason + optional remarks. Phase A: mock-only with toggleable success / failure. Emits cancel-shipment:success | :error | :cancel and exposes onSuccess / onError / onClose triggers for action binding.',
   icon: 'x-circle',

@@ -13,6 +13,8 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         registry: resolve(__dirname, 'src/registry.ts'),
+        api: resolve(__dirname, 'src/api.ts'),
+        seed: resolve(__dirname, 'src/seed.ts'),
       },
       name: 'PortalWidgets',
       formats: ['es', 'cjs'],
