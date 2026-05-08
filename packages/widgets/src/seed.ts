@@ -6,10 +6,12 @@
 // it up automatically — no other backend change required.
 
 import { cancelShipmentModalSeedEntry } from './goShipment/CancelShipmentModal/manifest/seed.js'
+import { addDocumentModalSeedEntry } from './goShipment/AddDocumentModal/manifest/seed.js'
 
 export type { WidgetSeedEntry } from './goShipment/CancelShipmentModal/manifest/seed.js'
-export { cancelShipmentModalSeedEntry }
+export { cancelShipmentModalSeedEntry, addDocumentModalSeedEntry }
 
 export const widgetSeedEntries = [
   cancelShipmentModalSeedEntry,
+  addDocumentModalSeedEntry,
 ] as const

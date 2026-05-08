@@ -1,0 +1,7 @@
+[
+  { "document_name": "Bill of Lading", "document_key": "bill_of_lading" },
+  { "document_name": "Commercial Invoice", "document_key": "commercial_invoice" },
+  { "document_name": "Packing List", "document_key": "packing_list" },
+  { "document_name": "Certificate of Origin", "document_key": "certificate_of_origin" },
+  { "document_name": "Insurance Certificate", "document_key": "insurance_certificate" }
+]

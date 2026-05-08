@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AddDocumentModal",
+  "description": "Modal that uploads one-or-more files of a chosen document type to a shipment workflow.",
+  "type": "object",
+  "properties": {
+    "open": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the modal is visible. Bind to a state slot."
+    },
+    "swaId": {
+      "type": "string",
+      "default": "",
+      "description": "Shipment Workflow Activity ID. Required for the real attach call. Bind to {{datasource.shipment.swa_id}}."
+    },
+    "existingDocumentKeys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Already-uploaded document_key values for this shipment — filtered out of the dropdown."
+    },
+    "apiMode": {
+      "type": "string",
+      "enum": ["mock", "real"],
+      "default": "mock",
+      "description": "`mock` returns canned options + simulates upload; `real` proxies to gocomet's library + workflow APIs."
+    },
+    "mockDelayMs": {
+      "type": "number",
+      "minimum": 0,
+      "default": 800,
+      "description": "Mock-only — artificial latency for each network hop."
+    },
+    "milestoneId": {
+      "type": "string",
+      "default": "Non CSI Documents",
+      "description": "milestone_id sent on the attach call."
+    },
+    "checklistId": {
+      "type": "string",
+      "default": "32",
+      "description": "checklist_id sent on the attach call."
+    },
+    "source": {
+      "type": "string",
+      "default": "table",
+      "description": "Tag identifying where the upload originated (`table` | `details` | etc.)."
+    },
+    "acceptedFileTypes": {
+      "type": "string",
+      "default": ".pdf,.png,.jpg,.jpeg,.zip,.eml,.xls,.xlsx,.doc,.docx",
+      "description": "Comma-separated extensions passed to the file input's accept attribute."
+    },
+    "maxFileSizeMb": {
+      "type": "number",
+      "minimum": 1,
+      "default": 10,
+      "description": "Per-file size limit in megabytes."
+    },
+    "allowMultiple": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the user can attach more than one file in a single submission."
+    },
+    "successEventName": {
+      "type": "string",
+      "default": "add-document:success"
+    },
+    "errorEventName": {
+      "type": "string",
+      "default": "add-document:error"
+    },
+    "cancelEventName": {
+      "type": "string",
+      "default": "add-document:cancel"
+    }
+  },
+  "additionalProperties": false
+}

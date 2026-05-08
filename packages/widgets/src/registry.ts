@@ -7,6 +7,8 @@ import type { ComponentType } from 'react'
 import {
   CancelShipmentModal,
   cancelShipmentModalManifest,
+  AddDocumentModal,
+  addDocumentModalManifest,
 } from './goShipment/index.js'
 
 export interface WidgetTrigger {
@@ -31,10 +33,14 @@ export const WIDGET_MAP: Record<string, ComponentType<Record<string, unknown>>> 
   CancelShipmentModal: CancelShipmentModal as unknown as ComponentType<
     Record<string, unknown>
   >,
+  AddDocumentModal: AddDocumentModal as unknown as ComponentType<
+    Record<string, unknown>
+  >,
 }
 
 export const MANIFEST_MAP: Record<string, WidgetManifest> = {
   CancelShipmentModal: cancelShipmentModalManifest,
+  AddDocumentModal: addDocumentModalManifest,
 }
 
 export const WIDGET_NAMES: ReadonlyArray<string> = Object.keys(WIDGET_MAP)
