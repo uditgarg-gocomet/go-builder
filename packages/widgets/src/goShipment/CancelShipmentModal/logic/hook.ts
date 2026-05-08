@@ -6,9 +6,9 @@
 
 import { useCallback, useState } from 'react'
 import { eventBus } from '@portal/action-runtime'
-import { DEFAULTS, REASONS_REQUIRING_REMARKS } from './constants.js'
+import { DEFAULTS, REASONS_REQUIRING_REMARKS } from '../shared/constants.js'
 import { submitCancellation } from './service.js'
-import type { CancelShipmentModalProps } from './types.js'
+import type { CancelShipmentModalProps } from '../shared/types.js'
 
 export interface CancelShipmentModalViewModel {
   // Form state

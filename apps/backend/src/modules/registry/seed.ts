@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client'
+import { widgetSeedEntries } from '@portal/widgets/seed'
 
 const prisma = new PrismaClient()
 
@@ -791,54 +792,18 @@ const primitives: PrimitiveDefinition[] = [
 ]
 
 // ── Built-in widgets ──────────────────────────────────────────────────────────
-// Bundled with the renderer (see apps/renderer/src/widgets/*) — sourceType
-// stays INTERNAL because nothing's fetched at runtime. Adding an entry here
-// makes the widget appear in the builder palette under its category.
-const widgets: PrimitiveDefinition[] = [
-  {
-    name: 'CancelShipmentModal',
-    displayName: 'Cancel Shipment Modal',
-    description:
-      'Modal that captures cancellation reason + optional remarks. Phase A: mock-only with toggleable success / failure. Emits cancel-shipment:success | :error | :cancel.',
-    category: 'Wired',
-    icon: 'x-circle',
-    tags: ['modal', 'cancel', 'shipment', 'wired', 'workflow'],
-    propsSchema: {
-      type: 'object',
-      properties: {
-        open: { type: 'boolean', default: false },
-        workflowId: { type: 'string', default: '' },
-        apiMode: {
-          type: 'string',
-          enum: ['mock', 'real'],
-          default: 'mock',
-        },
-        mockMode: {
-          type: 'string',
-          enum: ['success', 'failure'],
-          default: 'success',
-        },
-        mockDelayMs: { type: 'number', minimum: 0, default: 800 },
-        successEventName: {
-          type: 'string',
-          default: 'cancel-shipment:success',
-        },
-        errorEventName: { type: 'string', default: 'cancel-shipment:error' },
-        cancelEventName: { type: 'string', default: 'cancel-shipment:cancel' },
-      },
-    },
-    defaultProps: {
-      open: true,
-      workflowId: 'WF-DEMO-1',
-      apiMode: 'mock',
-      mockMode: 'success',
-      mockDelayMs: 800,
-      successEventName: 'cancel-shipment:success',
-      errorEventName: 'cancel-shipment:error',
-      cancelEventName: 'cancel-shipment:cancel',
-    },
-  },
-]
+// Each widget owns its own seed entry inside @portal/widgets/seed. To add a
+// new widget, append it to widgetSeedEntries in the package — no edit here.
+const widgets: PrimitiveDefinition[] = widgetSeedEntries.map(entry => ({
+  name: entry.name,
+  displayName: entry.displayName,
+  description: entry.description,
+  category: entry.category,
+  icon: entry.icon,
+  tags: [...entry.tags],
+  propsSchema: entry.propsSchema as Record<string, unknown>,
+  defaultProps: entry.defaultProps,
+}))
 
 async function seed() {
   console.log('Seeding component registry...')

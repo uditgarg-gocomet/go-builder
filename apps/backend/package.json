@@ -22,6 +22,7 @@
     "@fastify/multipart": "^8.3.0",
     "@fastify/static": "^7.0.4",
     "@openfga/sdk": "^0.6.3",
+    "@portal/widgets": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^8.40.0",
     "argon2": "^0.41.1",

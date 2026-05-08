@@ -5,10 +5,10 @@
 // This component is what the renderer actually mounts.
 
 import React from 'react'
-import { DEFAULTS } from './constants.js'
-import { useCancelShipmentModal } from './hook.js'
+import { DEFAULTS } from '../shared/constants.js'
+import { useCancelShipmentModal } from '../logic/hook.js'
 import { CancelShipmentModalView } from './View.js'
-import type { CancelShipmentModalProps } from './types.js'
+import type { CancelShipmentModalProps } from '../shared/types.js'
 
 export function CancelShipmentModal(
   props: CancelShipmentModalProps,

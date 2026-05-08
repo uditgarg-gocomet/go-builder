@@ -5,7 +5,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useRegistryStore } from '@/stores/registryStore'
 import type { RegistryEntry } from '@portal/core'
 
-const CATEGORIES = ['Layout', 'Data', 'Input', 'Action', 'Feedback', 'Typography', 'Display', 'Wired']
+const CATEGORIES = ['Layout', 'Data', 'Input', 'Action', 'Feedback', 'Typography', 'Display', 'Widget']
 
 // The /registry/entries API returns `currentVersionDetails` (single), but the
 // shared RegistryEntry type still declares `versions?: []`. Read both so

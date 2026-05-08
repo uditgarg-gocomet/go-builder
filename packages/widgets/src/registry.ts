@@ -7,7 +7,7 @@ import type { ComponentType } from 'react'
 import {
   CancelShipmentModal,
   cancelShipmentModalManifest,
-} from './CancelShipmentModal/index.js'
+} from './goShipment/index.js'
 
 export interface WidgetTrigger {
   name: string

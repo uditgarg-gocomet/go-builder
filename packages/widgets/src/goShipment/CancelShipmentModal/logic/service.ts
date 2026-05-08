@@ -4,12 +4,12 @@
 //           already passes everything needed; only the implementation below
 //           changes.
 
-import { MOCK_MESSAGES, REAL_API_ROUTE } from './constants.js'
+import { MOCK_MESSAGES, REAL_API_ROUTE } from '../shared/constants.js'
 import type {
   CancelShipmentPayload,
   CancelShipmentResult,
   SubmitOptions,
-} from './types.js'
+} from '../shared/types.js'
 
 // ── Real endpoint contract (for Phase E reference) ──────────────────────────
 // PUT {WORKFLOW_API}/v1/{user_type}/workflow/archive_unarchive
