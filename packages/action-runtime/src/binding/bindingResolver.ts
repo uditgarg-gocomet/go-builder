@@ -2,13 +2,27 @@ import type { BindingContext } from '@portal/core'
 
 const BINDING_PATTERN = /\{\{([^}]+)\}\}/g
 
+// Fallback operator: `{{a || b || c}}` returns the first non-empty value
+// among the resolved paths. Treats `null`, `undefined`, and `''` as empty.
+// Paths on either side are trimmed individually.
+function resolveWithFallback(expr: string, context: Record<string, unknown>): unknown {
+  const parts = expr.split('||').map(p => p.trim()).filter(p => p.length > 0)
+  for (const p of parts) {
+    const v = resolvePath(p, context)
+    if (v !== undefined && v !== null && v !== '') return v
+  }
+  // When all paths are empty, return `undefined` so string-template
+  // interpolation renders as empty rather than 'undefined'.
+  return undefined
+}
+
 export function resolveBinding(expression: string, context: BindingContext): unknown {
   const match = expression.match(/^\{\{([^}]+)\}\}$/)
   if (match?.[1] != null) {
-    return resolvePath(match[1].trim(), context as Record<string, unknown>)
+    return resolveWithFallback(match[1].trim(), context as Record<string, unknown>)
   }
   return expression.replace(BINDING_PATTERN, (_, path: string) => {
-    const value = resolvePath(path.trim(), context as Record<string, unknown>)
+    const value = resolveWithFallback(path.trim(), context as Record<string, unknown>)
     return value != null ? String(value) : ''
   })
 }

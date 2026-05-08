@@ -67,6 +67,14 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   const setUserGroups = useAppStore(s => s.setUserGroups)
   const layoutSelection = useLayoutSelectionStore(s => s.selection)
 
+  // Bulk setters for page-level schema pieces — hydrated from the fetched
+  // draft so downstream consumers (autosave, preview, binding suggestions)
+  // see the real page state rather than an empty store.
+  const setDataSources = useAppStore(s => s.setDataSources)
+  const setActions = useAppStore(s => s.setActions)
+  const setForms = useAppStore(s => s.setForms)
+  const setStateSlots = useAppStore(s => s.setStateSlots)
+
   const resetCanvas = useCallback(() => {
     loadCanvas({ nodes: {}, rootId: '', childMap: {}, parentMap: {}, selectedNodeId: null, hoveredNodeId: null, dragState: null })
   }, [loadCanvas])
@@ -108,11 +116,25 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   useEffect(() => {
     if (!activePageId) return
     resetCanvas() // Clear immediately so canvas isn't stale while fetch is in flight
+    // Also clear app-store page-level lists so stale sources/actions/forms
+    // from the previous page don't leak into the new page's autosave.
+    setDataSources([])
+    setActions([])
+    setForms([])
+    setStateSlots([])
     void (async () => {
       try {
         const data = await clientFetch<{ schema?: PageSchema }>(`/schema/${activePageId}/draft`)
         if (data.schema?.layout) {
           loadCanvas(deserializeSchemaToCanvas(data.schema))
+          // Hydrate page-level pieces from the schema so preview + autosave
+          // + binding suggestions all see the real values. Without this the
+          // store stays empty after navigating to a pre-built page, and
+          // any preview ships with no mock data.
+          setDataSources(data.schema.dataSources ?? [])
+          setActions(data.schema.actions ?? [])
+          setForms(data.schema.forms ?? [])
+          setStateSlots(data.schema.state ?? [])
         }
         // No resetCanvas() here — already done synchronously above
       } catch {

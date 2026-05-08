@@ -1,19 +1,87 @@
 'use client'
 
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react'
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react'
 import type { PreviewSession } from '@/app/api/preview/create/route'
-import type { ComponentNode } from '@portal/core'
+import type { ComponentNode, NodeVisibility } from '@portal/core'
+import { resolveBinding as resolveBindingImpl } from '@portal/action-runtime'
+import {
+  Stack, Grid, Divider, Card, Tabs, Accordion, Modal,
+  Button, IconButton, Link as UILink, DropdownMenu,
+  Alert, Toast, Spinner, Skeleton, EmptyState,
+  Heading, Text, Badge, Avatar, Tag, StatCard,
+  DataTable, Chart,
+  TextInput, NumberInput, Select, MultiSelect, DatePicker,
+  Checkbox, Toggle, RadioGroup, Textarea, FileUpload,
+} from '@portal/ui'
+
+// ── Primitive map ────────────────────────────────────────────────────────────
+// Mirrors the renderer's componentResolver. Any custom_widget nodes fall
+// back to a small stub card — the preview is explicitly not a production
+// environment, so we don't load widget bundles.
+
+type ComponentType = React.ComponentType<Record<string, unknown>>
+
+const PRIMITIVES: Record<string, ComponentType> = {
+  Stack: Stack as ComponentType,
+  Grid: Grid as ComponentType,
+  Divider: Divider as ComponentType,
+  Card: Card as ComponentType,
+  Tabs: Tabs as ComponentType,
+  Accordion: Accordion as ComponentType,
+  Modal: Modal as ComponentType,
+  Button: Button as ComponentType,
+  IconButton: IconButton as ComponentType,
+  Link: UILink as ComponentType,
+  DropdownMenu: DropdownMenu as ComponentType,
+  Alert: Alert as ComponentType,
+  Toast: Toast as ComponentType,
+  Spinner: Spinner as ComponentType,
+  Skeleton: Skeleton as ComponentType,
+  EmptyState: EmptyState as ComponentType,
+  Heading: Heading as ComponentType,
+  Text: Text as ComponentType,
+  Badge: Badge as ComponentType,
+  Avatar: Avatar as ComponentType,
+  Tag: Tag as ComponentType,
+  StatCard: StatCard as ComponentType,
+  DataTable: DataTable as ComponentType,
+  Chart: Chart as ComponentType,
+  TextInput: TextInput as ComponentType,
+  NumberInput: NumberInput as ComponentType,
+  Select: Select as ComponentType,
+  MultiSelect: MultiSelect as ComponentType,
+  DatePicker: DatePicker as ComponentType,
+  Checkbox: Checkbox as ComponentType,
+  Toggle: Toggle as ComponentType,
+  RadioGroup: RadioGroup as ComponentType,
+  Textarea: Textarea as ComponentType,
+  FileUpload: FileUpload as ComponentType,
+  RichText: Text as ComponentType,
+}
 
 // ── Preview contexts ──────────────────────────────────────────────────────────
 
 interface PreviewBindingCtx {
-  mockData: Record<string, unknown>
-  resolveBinding: (expr: string) => unknown
+  // Shaped to mirror the renderer's full BindingContext so resolveBinding
+  // works identically — bindings like `{{datasource.shipment.id}}` or
+  // `{{params.id}}` resolve the same way as in production.
+  context: {
+    datasource: Record<string, unknown>
+    params: Record<string, string>
+    user: { id: string; email: string; groups: string[] } | undefined
+    env: 'STAGING' | 'PRODUCTION'
+    state: Record<string, unknown>
+    form: Record<string, unknown>
+  }
+  resolve: (expr: string) => unknown
 }
 
 const PreviewBindingContext = createContext<PreviewBindingCtx>({
-  mockData: {},
-  resolveBinding: () => undefined,
+  context: {
+    datasource: {}, params: {}, user: undefined,
+    env: 'STAGING', state: {}, form: {},
+  },
+  resolve: () => undefined,
 })
 
 interface InterceptedAction {
@@ -34,115 +102,108 @@ const PreviewActionContext = createContext<PreviewActionCtx>({
   executeAction: () => undefined,
 })
 
-// ── Binding resolver ──────────────────────────────────────────────────────────
+// ── Visibility + permission helpers ──────────────────────────────────────────
 
-function resolveValue(expr: string, mockData: Record<string, unknown>): unknown {
-  // Strip {{ }} if present
-  const cleaned = expr.replace(/^\{\{|\}\}$/g, '').trim()
-  const parts = cleaned.split('.')
-  let current: unknown = mockData
-  for (const part of parts) {
-    if (current === null || current === undefined || typeof current !== 'object') return undefined
-    current = (current as Record<string, unknown>)[part]
+function isVisible(v: NodeVisibility | undefined, groups: string[]): boolean {
+  if (!v) return true
+  if (v.requireGroups && v.requireGroups.length > 0 && !v.requireGroups.some(g => groups.includes(g))) {
+    return false
   }
-  return current
+  if (v.hideForGroups && v.hideForGroups.length > 0 && v.hideForGroups.some(g => groups.includes(g))) {
+    return false
+  }
+  return true
 }
 
-// ── Minimal schema renderer ───────────────────────────────────────────────────
+// ── PreviewNode — real primitive rendering with binding + dataSource support ─
 
-function PreviewNode({ node }: { node: ComponentNode }): React.ReactElement {
-  const { resolveBinding } = useContext(PreviewBindingContext)
+function PreviewNode({ node }: { node: ComponentNode }): React.ReactElement | null {
+  const { context, resolve } = useContext(PreviewBindingContext)
+  const { executeAction } = useContext(PreviewActionContext)
 
-  // Resolve bindings into props
-  const resolvedProps: Record<string, unknown> = { ...node.props }
-  for (const [key, expr] of Object.entries(node.bindings)) {
-    resolvedProps[key] = resolveBinding(expr)
+  // Visibility hook — same semantics as production renderer
+  const groups = context.user?.groups ?? []
+  if (!isVisible(node.visibility, groups)) return null
+
+  // Resolve all bindings into a flat props map
+  const resolvedBindings: Record<string, unknown> = {}
+  for (const [key, expr] of Object.entries(node.bindings ?? {})) {
+    resolvedBindings[key] = resolve(expr)
   }
 
-  const children = node.children?.map(child => (
-    <PreviewNode key={child.id} node={child} />
-  ))
+  // Merge: static props < resolved bindings
+  let props: Record<string, unknown> = { ...node.props, ...resolvedBindings }
 
-  // Minimal render by type family
-  const type = node.type.toLowerCase()
+  // ── dataSource injection ───────────────────────────────────────────────
+  // Same rule as production renderer: when a node has `dataSource.alias`,
+  // inject `context.datasource[alias]` as the `data` prop. DataTables and
+  // other list consumers pick it up automatically.
+  const dsAlias = node.dataSource?.alias
+  if (dsAlias) {
+    props = { data: context.datasource[dsAlias] ?? [], ...props }
+  }
 
-  if (type.includes('stack') || type.includes('grid') || type.includes('container')) {
-    return (
-      <div style={node.style as React.CSSProperties} className="flex flex-col gap-2">
-        {children}
-      </div>
-    )
+  // ── Action bindings → intercepted callbacks ───────────────────────────
+  const handlers: Record<string, (...args: unknown[]) => void> = {}
+  for (const binding of node.actions ?? []) {
+    handlers[binding.trigger] = (...args: unknown[]) => {
+      executeAction(binding.actionId, binding.trigger, {
+        params: binding.params,
+        eventArg: args[0],
+      })
+    }
   }
-  if (type.includes('card')) {
-    return (
-      <div className="rounded border border-border bg-card p-4" style={node.style as React.CSSProperties}>
-        {children}
-      </div>
-    )
+
+  // ── Tabs content wiring (matches production) ───────────────────────────
+  let childrenOverride: React.ReactNode | undefined
+  let suppressChildren = false
+  if (node.type === 'Tabs' && Array.isArray(props['items'])) {
+    const items = (props['items'] as Array<Record<string, unknown>>).map((item, idx) => ({
+      ...item,
+      content: node.children[idx]
+        ? <PreviewNode key={node.children[idx]!.id} node={node.children[idx]!} />
+        : null,
+    }))
+    props = { ...props, items }
+    suppressChildren = true
   }
-  if (type.includes('button')) {
+
+  const children = suppressChildren
+    ? undefined
+    : node.children && node.children.length > 0
+      ? node.children.map(child => <PreviewNode key={child.id} node={child} />)
+      : undefined
+  if (children !== undefined) childrenOverride = children
+
+  const Component = PRIMITIVES[node.type]
+  if (!Component) {
+    // custom_widget or unknown type — render a stub so users see it but
+    // know it's not the full production widget
     return (
-      <button
-        type="button"
-        className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      <div
+        className="rounded border border-dashed border-yellow-400 bg-yellow-50/40 p-3 text-xs text-yellow-800"
         style={node.style as React.CSSProperties}
       >
-        {String(resolvedProps['label'] ?? resolvedProps['children'] ?? 'Button')}
-      </button>
-    )
-  }
-  if (type.includes('text') || type.includes('heading') || type.includes('label')) {
-    return (
-      <p style={node.style as React.CSSProperties}>
-        {String(resolvedProps['content'] ?? resolvedProps['children'] ?? resolvedProps['text'] ?? '')}
-      </p>
-    )
-  }
-  if (type.includes('input') || type.includes('textfield')) {
-    return (
-      <input
-        type="text"
-        placeholder={String(resolvedProps['placeholder'] ?? '')}
-        className="rounded border border-input bg-background px-3 py-2 text-sm"
-        style={node.style as React.CSSProperties}
-        readOnly
-      />
-    )
-  }
-  if (type.includes('image') || type.includes('img')) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={String(resolvedProps['src'] ?? '')}
-        alt={String(resolvedProps['alt'] ?? '')}
-        style={node.style as React.CSSProperties}
-        className="max-w-full"
-      />
+        <div className="font-semibold">{node.type}</div>
+        <div className="opacity-70">Preview stub — widgets render fully in production.</div>
+      </div>
     )
   }
 
-  // Fallback: render as div with children
   return (
-    <div
-      data-preview-type={node.type}
-      className="rounded border border-dashed border-muted-foreground/30 p-2"
-      style={node.style as React.CSSProperties}
-    >
-      <span className="text-[10px] text-muted-foreground">{node.type}</span>
-      <div>{children}</div>
-    </div>
+    <Component {...props} {...handlers}>
+      {childrenOverride}
+    </Component>
   )
 }
 
-// ── PreviewActionLogPanel ─────────────────────────────────────────────────────
+// ── Action log panel ──────────────────────────────────────────────────────────
 
 function PreviewActionLogPanel(): React.ReactElement {
   const { interceptedActions } = useContext(PreviewActionContext)
-
   if (interceptedActions.length === 0) {
     return <p className="text-xs text-muted-foreground">No actions fired yet.</p>
   }
-
   return (
     <div className="flex flex-col gap-1">
       {interceptedActions.map(a => (
@@ -174,19 +235,21 @@ export function PreviewRenderer({ session }: PreviewRendererProps): React.ReactE
   const [frameWidth, setFrameWidth] = useState('100%')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Poll for schema updates every 2s
+  // Poll for schema updates every 2s — lets the Builder push edits into the
+  // preview tab without requiring a manual refresh.
   useEffect(() => {
     const id = setInterval(async () => {
-      const res = await fetch(`/api/preview/${session.token}`, { cache: 'no-store' })
-      if (res.ok) {
-        const data = (await res.json()) as { session: PreviewSession }
-        setCurrentSession(data.session)
-      }
+      try {
+        const res = await fetch(`/api/preview/${session.token}`, { cache: 'no-store' })
+        if (res.ok) {
+          const data = (await res.json()) as { session: PreviewSession }
+          setCurrentSession(data.session)
+        }
+      } catch { /* non-critical */ }
     }, 2000)
     return () => clearInterval(id)
   }, [session.token])
 
-  // Listen to breakpoint changes from PreviewShell
   useEffect(() => {
     const handler = (e: Event): void => {
       const ce = e as CustomEvent<string>
@@ -196,8 +259,28 @@ export function PreviewRenderer({ session }: PreviewRendererProps): React.ReactE
     return () => window.removeEventListener('preview:breakpoint', handler)
   }, [])
 
-  const resolveBinding = (expr: string): unknown =>
-    resolveValue(expr, currentSession.mockData)
+  // Shape `mockData` into the full BindingContext. The builder's
+  // usePreviewTab sends `{ datasource: { alias: ... } }` already; we fill in
+  // defaults for the rest so resolveBinding is happy.
+  const context = useMemo(() => {
+    const md = (currentSession.mockData ?? {}) as Record<string, unknown>
+    return {
+      datasource: (md['datasource'] as Record<string, unknown>) ?? {},
+      params: (md['params'] as Record<string, string>) ?? {},
+      user: (md['user'] as { id: string; email: string; groups: string[] } | undefined),
+      env: (md['env'] as 'STAGING' | 'PRODUCTION' | undefined) ?? 'STAGING',
+      state: (md['state'] as Record<string, unknown>) ?? {},
+      form: (md['form'] as Record<string, unknown>) ?? {},
+    }
+  }, [currentSession.mockData])
+
+  const resolve = (expr: string): unknown => {
+    try {
+      return resolveBindingImpl(expr, context as never)
+    } catch {
+      return undefined
+    }
+  }
 
   const executeAction = (actionId: string, trigger: string, params?: Record<string, unknown>): void => {
     setInterceptedActions(prev => [
@@ -215,7 +298,7 @@ export function PreviewRenderer({ session }: PreviewRendererProps): React.ReactE
   const schema = currentSession.schema as { layout?: ComponentNode } | null
 
   return (
-    <PreviewBindingContext.Provider value={{ mockData: currentSession.mockData, resolveBinding }}>
+    <PreviewBindingContext.Provider value={{ context, resolve }}>
       <PreviewActionContext.Provider value={{ interceptedActions, executeAction }}>
         <div className="flex h-full flex-col">
           {/* Viewport frame */}
@@ -236,7 +319,7 @@ export function PreviewRenderer({ session }: PreviewRendererProps): React.ReactE
             </div>
           </div>
 
-          {/* Action log panel (collapsible) */}
+          {/* Action log panel */}
           <div className="border-t border-border">
             <button
               type="button"

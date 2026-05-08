@@ -47,6 +47,38 @@ NAV_TO_SHIPMENTS_ID = "act_nav_to_shipments_v2"
 NAV_TO_DETAIL_ID    = "act_nav_to_detail_v2"
 APPROVE_ALL_ID      = "act_approve_all_v2"
 
+# Row-action ids for the mandatory-documents table. `view` is world-visible
+# and opens the DRDV modal; the other four gate on ops_admin both at the
+# button render (DataTable.rowActions[].requireGroups) and at execution
+# (ActionDef.requireGroups) so viewers never see the icon AND a DENIED
+# log fires if they somehow bypass the render-time filter.
+DOC_VIEW_ID     = "act_doc_view_v2"
+DOC_UPLOAD_ID   = "act_doc_upload_v2"
+DOC_DELETE_ID   = "act_doc_delete_v2"
+DOC_REFRESH_ID  = "act_doc_refresh_v2"
+DOC_BLOCK_ID    = "act_doc_block_v2"
+
+# DRDV modal wiring — approve/reject run a toast + close-modal sequence,
+# close-modal resets the open-state slot so onOpenChange flips back cleanly.
+DRDV_APPROVE_ID         = "act_drdv_approve_v2"
+DRDV_REJECT_ID          = "act_drdv_reject_v2"
+DRDV_APPROVE_TOAST_ID   = "act_drdv_approve_toast_v2"
+DRDV_REJECT_TOAST_ID    = "act_drdv_reject_toast_v2"
+DRDV_MODAL_CLOSE_ID     = "act_drdv_modal_close_v2"
+
+# Cancel Shipment modal wiring. The overview-card button opens the modal
+# (admin-only via ActionDef.requireGroups). The widget handles its own form
+# + submit + lifecycle; the page only reacts to success/error/close.
+CANCEL_SHIP_OPEN_ID         = "act_cancel_ship_open_v2"
+CANCEL_SHIP_CLOSE_ID        = "act_cancel_ship_close_v2"
+CANCEL_SHIP_SUCCESS_ID      = "act_cancel_ship_success_v2"
+CANCEL_SHIP_SUCCESS_TOAST_ID = "act_cancel_ship_success_toast_v2"
+CANCEL_SHIP_ERROR_ID        = "act_cancel_ship_error_v2"
+# After a successful cancel, write "Cancelled" into a state slot so the
+# Shipment Status bindings (overview + details tab) pick it up via the
+# `||` fallback operator in the binding resolver.
+CANCEL_SHIP_SET_STATUS_ID   = "act_cancel_ship_set_status_v2"
+
 
 # ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -80,6 +112,293 @@ def _approve_all() -> dict:
         },
         "requireGroups": ["ops_admin"],
     }
+
+
+# ── Document row actions ────────────────────────────────────────────────────
+# View (always available) and four admin-only actions (upload / delete /
+# refresh / block). Each admin action declares `requireGroups` so viewer
+# clicks are short-circuited in the executor with a DENIED log entry — a
+# second layer of defence behind the DataTable's visibility filter.
+
+def _doc_view() -> dict:
+    return {
+        "id":   DOC_VIEW_ID,
+        "name": "Open document review",
+        # Runs two sub-actions in sequence — first stash the clicked row's
+        # doc id into state, then flip the modal open flag. The second
+        # action also covers the case where the user closes and re-opens
+        # the modal (state.selectedDocId stays set so the modal re-renders
+        # the same row). The Stub uses only the flag but the id is saved
+        # for a future per-row selection pass.
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": ["act_doc_view_set_id_v2", "act_doc_view_open_v2"],
+            "stopOnError": False,
+        },
+    }
+
+
+def _doc_view_set_id() -> dict:
+    return {
+        "id":   "act_doc_view_set_id_v2",
+        "name": "Stash clicked doc id",
+        "type": "SET_STATE",
+        "config": {"key": "selectedDocId", "value": "{{event.name}}"},
+    }
+
+
+def _doc_view_open() -> dict:
+    return {
+        "id":   "act_doc_view_open_v2",
+        "name": "Open DRDV modal",
+        "type": "SET_STATE",
+        "config": {"key": "isDrdvModalOpen", "value": True},
+    }
+
+
+def _doc_upload() -> dict:
+    return {
+        "id":   DOC_UPLOAD_ID,
+        "name": "Upload document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Upload started",
+            "description": "Uploading for {{event.name}}…",
+            "variant": "info",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_delete() -> dict:
+    return {
+        "id":   DOC_DELETE_ID,
+        "name": "Delete document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Deleted",
+            "description": "{{event.name}} removed from the queue.",
+            "variant": "warning",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_refresh() -> dict:
+    return {
+        "id":   DOC_REFRESH_ID,
+        "name": "Refresh document",
+        "type": "REFRESH_DATASOURCE",
+        "config": {"alias": "mandatoryDocs"},
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _doc_block() -> dict:
+    return {
+        "id":   DOC_BLOCK_ID,
+        "name": "Skip document",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Skipped",
+            "description": "{{event.name}} marked as skipped.",
+            "variant": "info",
+        },
+        "requireGroups": ["ops_admin"],
+    }
+
+
+# ── DRDV modal actions ──────────────────────────────────────────────────────
+# Approve / reject each run a toast + close-modal sequence. The close-modal
+# action also runs when the Modal primitive emits onOpenChange(false) so
+# the state slot stays in sync with the user closing via Escape or the X.
+
+def _drdv_approve() -> dict:
+    return {
+        "id":   DRDV_APPROVE_ID,
+        "name": "Handle DRDV approve",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": [DRDV_APPROVE_TOAST_ID, DRDV_MODAL_CLOSE_ID],
+            "stopOnError": False,
+        },
+    }
+
+
+def _drdv_approve_toast() -> dict:
+    return {
+        "id":   DRDV_APPROVE_TOAST_ID,
+        "name": "DRDV approve toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Document approved",
+            "description": "{{event.documentBucketId}} has been approved.",
+            "variant": "success",
+        },
+    }
+
+
+def _drdv_reject() -> dict:
+    return {
+        "id":   DRDV_REJECT_ID,
+        "name": "Handle DRDV reject",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": [DRDV_REJECT_TOAST_ID, DRDV_MODAL_CLOSE_ID],
+            "stopOnError": False,
+        },
+    }
+
+
+def _drdv_reject_toast() -> dict:
+    return {
+        "id":   DRDV_REJECT_TOAST_ID,
+        "name": "DRDV reject toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Document rejected",
+            "description": "{{event.documentBucketId}} has been rejected.",
+            "variant": "warning",
+        },
+    }
+
+
+def _drdv_modal_close() -> dict:
+    return {
+        "id":   DRDV_MODAL_CLOSE_ID,
+        "name": "Close DRDV modal",
+        "type": "SET_STATE",
+        "config": {"key": "isDrdvModalOpen", "value": False},
+    }
+
+
+# ── Cancel Shipment modal actions ───────────────────────────────────────────
+# Open gated to ops_admin at execution time (defence in depth alongside the
+# button's visibility rule). Success runs a toast + close sequence; error
+# runs a toast only so the widget stays open for the user to retry.
+
+def _cancel_ship_open() -> dict:
+    return {
+        "id":   CANCEL_SHIP_OPEN_ID,
+        "name": "Open Cancel Shipment modal",
+        "type": "SET_STATE",
+        "config": {"key": "isCancelShipmentOpen", "value": True},
+        "requireGroups": ["ops_admin"],
+    }
+
+
+def _cancel_ship_close() -> dict:
+    return {
+        "id":   CANCEL_SHIP_CLOSE_ID,
+        "name": "Close Cancel Shipment modal",
+        "type": "SET_STATE",
+        "config": {"key": "isCancelShipmentOpen", "value": False},
+    }
+
+
+def _cancel_ship_success_toast() -> dict:
+    return {
+        "id":   CANCEL_SHIP_SUCCESS_TOAST_ID,
+        "name": "Cancel shipment success toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Shipment cancelled",
+            "description": "Workflow {{event.workflowId}} cancelled ({{event.reason}}).",
+            "variant": "success",
+        },
+    }
+
+
+def _cancel_ship_set_status() -> dict:
+    return {
+        "id":   CANCEL_SHIP_SET_STATUS_ID,
+        "name": "Set shipment status to Cancelled",
+        "type": "SET_STATE",
+        "config": {"key": "shipmentStatusOverride", "value": "Cancelled"},
+    }
+
+
+def _cancel_ship_success() -> dict:
+    # The widget emits onClose(after_success) immediately after onSuccess,
+    # so we don't close here. We (a) flip the status-override state slot so
+    # the overview & details status fields re-render as "Cancelled", and
+    # (b) show the success toast.
+    return {
+        "id":   CANCEL_SHIP_SUCCESS_ID,
+        "name": "Handle cancel shipment success",
+        "type": "RUN_SEQUENCE",
+        "config": {
+            "actions": [CANCEL_SHIP_SET_STATUS_ID, CANCEL_SHIP_SUCCESS_TOAST_ID],
+            "stopOnError": False,
+        },
+    }
+
+
+def _cancel_ship_error() -> dict:
+    return {
+        "id":   CANCEL_SHIP_ERROR_ID,
+        "name": "Cancel shipment error toast",
+        "type": "SHOW_TOAST",
+        "config": {
+            "title": "Cancellation failed",
+            "description": "{{event.error}}",
+            "variant": "error",
+        },
+    }
+
+
+CANCEL_SHIP_ACTION_IDS = {
+    "open":    CANCEL_SHIP_OPEN_ID,
+    "close":   CANCEL_SHIP_CLOSE_ID,
+    "success": CANCEL_SHIP_SUCCESS_ID,
+    "error":   CANCEL_SHIP_ERROR_ID,
+}
+
+
+DOC_ACTION_IDS = {
+    "view":    DOC_VIEW_ID,
+    "upload":  DOC_UPLOAD_ID,
+    "delete":  DOC_DELETE_ID,
+    "refresh": DOC_REFRESH_ID,
+    "block":   DOC_BLOCK_ID,
+}
+
+
+def _detail_actions() -> list[dict]:
+    """All actions wired to the detail page — approve-all + docs table +
+    DRDV modal + cancel-shipment modal. Order doesn't matter but grouping
+    makes diffs readable."""
+    return [
+        _approve_all(),
+        _doc_view(), _doc_view_set_id(), _doc_view_open(),
+        _doc_upload(), _doc_delete(), _doc_refresh(), _doc_block(),
+        _drdv_approve(), _drdv_approve_toast(),
+        _drdv_reject(), _drdv_reject_toast(),
+        _drdv_modal_close(),
+        _cancel_ship_open(), _cancel_ship_close(),
+        _cancel_ship_success(), _cancel_ship_success_toast(),
+        _cancel_ship_set_status(),
+        _cancel_ship_error(),
+    ]
+
+
+def _detail_state() -> list[dict]:
+    """State slots the detail page owns.
+
+    - `isDrdvModalOpen` gates the DRDV modal's `open` prop.
+    - `selectedDocId` holds the document name clicked on the table row so a
+      future iteration can hand a per-row selected id into the DRDV widget.
+    - `isCancelShipmentOpen` gates the CancelShipmentModal widget's `open`.
+    - `shipmentStatusOverride` is set to "Cancelled" after a successful
+      shipment cancellation. The shipment-status bindings use the `||`
+      fallback operator so this takes precedence over the fetched value.
+    """
+    return [
+        {"name": "isDrdvModalOpen",        "type": "boolean", "defaultValue": False},
+        {"name": "selectedDocId",          "type": "string",  "defaultValue": ""},
+        {"name": "isCancelShipmentOpen",   "type": "boolean", "defaultValue": False},
+        {"name": "shipmentStatusOverride", "type": "string",  "defaultValue": ""},
+    ]
 
 
 # ── Data sources (REST-backed) ──────────────────────────────────────────────
@@ -237,7 +556,8 @@ def apply_chrome(token: str, app_id: str) -> None:
 # ── Schema savers ───────────────────────────────────────────────────────────
 
 def save_schema(token: str, app_id: str, page_id: str, page_name: str, page_slug: str,
-                order: int, layout: dict, actions: list, data_sources: list) -> str:
+                order: int, layout: dict, actions: list, data_sources: list,
+                state: list | None = None) -> str:
     schema = {
         "pageId": page_id,
         "appId":  app_id,
@@ -252,7 +572,7 @@ def save_schema(token: str, app_id: str, page_id: str, page_name: str, page_slug
         "dataSources": data_sources,
         "actions":     actions,
         "forms":       [],
-        "state":       [],
+        "state":       state or [],
         "theme":       THEME,
         "params":      [
             {"name": "id",     "type": "string", "required": False},
@@ -318,9 +638,17 @@ def main() -> None:
     )
     det_version   = save_schema(
         token, app_id, detail_id, "Shipment Detail", "shipment-detail", 2,
-        build_detail_layout(APPROVE_ALL_ID),
-        [_approve_all()],
+        build_detail_layout(
+            APPROVE_ALL_ID,
+            DOC_ACTION_IDS,
+            DRDV_APPROVE_ID,
+            DRDV_REJECT_ID,
+            DRDV_MODAL_CLOSE_ID,
+            cancel_shipment_action_ids=CANCEL_SHIP_ACTION_IDS,
+        ),
+        _detail_actions(),
         _detail_sources(),
+        state=_detail_state(),
     )
     print(f"  ✓ home v = {home_version}")
     print(f"  ✓ shipments v = {ship_version}")
