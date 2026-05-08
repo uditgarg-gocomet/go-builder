@@ -1,0 +1,106 @@
+{
+  "approval_status": "review_pending",
+  "workflow_document_comparison_id": "wdc-mock-de3c4868",
+  "updated_at": "2026-05-04T10:55:00.000+05:30",
+  "comparison_data_status": "",
+  "approval_status_description": { "reason": "", "remarks": "" },
+  "document_data": {
+    "fields": {
+      "key": "details",
+      "display_name": "Document",
+      "columns": [
+        { "key": "display_name", "display_name": "Field" },
+        { "key": "value", "display_name": "Document Value" }
+      ],
+      "row_data": [
+        { "key": "bill_of_lading", "display_name": "BL Number", "value": "MEDUW5124930", "type": "string" },
+        { "key": "bl_type", "display_name": "BL Type", "value": "ORIGINAL BILL OF LADING", "type": "string" },
+        { "key": "consignee_name", "display_name": "Consignee Name", "value": "BRITA SARL", "type": "string" },
+        { "key": "container_numbers", "display_name": "Container Number", "value": "MSMU6039541", "type": "string" },
+        { "key": "port_of_origin", "display_name": "Port of Loading", "value": "DURBAN", "type": "string" },
+        { "key": "port_of_discharge", "display_name": "Port of Destination", "value": "TAMATAVE", "type": "string" },
+        { "key": "quantity", "display_name": "Quantity", "value": 1628, "type": "number" },
+        { "key": "gross_weight", "display_name": "Total Gross Weight", "value": 17632.316, "type": "number" }
+      ],
+      "has_error": false
+    },
+    "line_items": {}
+  },
+  "source_data": {
+    "fields": {
+      "key": "details",
+      "display_name": "Source",
+      "columns": [
+        { "key": "display_name", "display_name": "Field" },
+        { "key": "value", "display_name": "Source Value" }
+      ],
+      "row_data": [
+        { "key": "bill_of_lading", "display_name": "BL Number", "value": "MEDUW5124930", "type": "string" },
+        { "key": "bl_type", "display_name": "BL Type", "value": "ORIGINAL BILL OF LADING", "type": "string" },
+        { "key": "consignee_name", "display_name": "Consignee Name", "value": "BRITA SARL", "type": "string" },
+        { "key": "container_numbers", "display_name": "Container Number", "value": "MSMU6039541", "type": "string" },
+        { "key": "port_of_origin", "display_name": "Port of Loading", "value": "DURBAN", "type": "string" },
+        { "key": "port_of_discharge", "display_name": "Port of Destination", "value": "TAMATAVE", "type": "string" },
+        { "key": "quantity", "display_name": "Quantity", "value": 1500, "type": "number" },
+        { "key": "gross_weight", "display_name": "Total Gross Weight", "value": 17500.0, "type": "number" }
+      ],
+      "has_error": true
+    },
+    "line_items": {}
+  },
+  "error_fields": {
+    "document_data": {
+      "fields": {
+        "key": "details",
+        "display_name": "Document errors",
+        "columns": [
+          { "key": "display_name", "display_name": "Field" },
+          { "key": "value", "display_name": "Document Value" }
+        ],
+        "row_data": [
+          { "key": "quantity", "display_name": "Quantity", "value": 1628, "type": "number" },
+          { "key": "gross_weight", "display_name": "Total Gross Weight", "value": 17632.316, "type": "number" }
+        ],
+        "has_error": true
+      },
+      "line_items": {}
+    },
+    "source_data": {
+      "fields": {
+        "key": "details",
+        "display_name": "Source errors",
+        "columns": [
+          { "key": "display_name", "display_name": "Field" },
+          { "key": "value", "display_name": "Source Value" }
+        ],
+        "row_data": [
+          { "key": "quantity", "display_name": "Quantity", "value": 1500, "type": "number" },
+          { "key": "gross_weight", "display_name": "Total Gross Weight", "value": 17500.0, "type": "number" }
+        ],
+        "has_error": true
+      },
+      "line_items": {}
+    }
+  },
+  "form_requisite": {
+    "approval_status": {
+      "review_pending": "Pending Review",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "ready": "Ready",
+      "validation_pending": "Validation Pending",
+      "validation_error": "Validation Error"
+    },
+    "allowed_reasons": [
+      { "label": "Mismatch with source", "value": "mismatch_with_source" },
+      { "label": "Missing fields", "value": "missing_fields" },
+      { "label": "Document quality", "value": "document_quality" },
+      { "label": "Other", "value": "other" }
+    ],
+    "actions": {
+      "verify": { "enabled": true, "visibility": true, "display_name": "Verify", "tooltip_text": "" },
+      "reject": { "enabled": true, "visibility": true, "display_name": "Reject", "tooltip_text": "" },
+      "submit_for_reverification": { "enabled": false, "visibility": false, "display_name": "Submit to Validate", "tooltip_text": "" }
+    }
+  }
+}

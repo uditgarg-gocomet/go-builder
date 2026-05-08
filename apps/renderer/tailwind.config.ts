@@ -4,6 +4,7 @@ const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
     '../../packages/ui/src/**/*.{ts,tsx}',
+    '../../packages/widgets/src/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {

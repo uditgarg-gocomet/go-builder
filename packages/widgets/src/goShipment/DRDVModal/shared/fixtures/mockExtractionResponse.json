@@ -1,0 +1,58 @@
+{
+  "can_edit": true,
+  "combined_extracted_data": {
+    "fields": {
+      "key": "details",
+      "display_name": "Fields",
+      "columns": [
+        { "key": "display_name", "display_name": "Field Name" },
+        { "key": "value", "display_name": "Value" },
+        { "key": "source", "display_name": "Source" }
+      ],
+      "row_data": [
+        { "type": "string", "error": "", "value": "MEDUW5124930", "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "BL Number", "manual_update": "false", "key": "bill_of_lading", "path": "@029035bd>parsed_data>documents$0>details>bill_of_lading", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "Draft BL", "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "BL Status", "manual_update": "false", "key": "bl_status", "path": "@029035bd>parsed_data>documents$0>details>bl_status", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "ORIGINAL BILL OF LADING", "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "BL Type", "manual_update": "false", "key": "bl_type", "path": "@029035bd>parsed_data>documents$0>details>bl_type", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "MEDITERRANEAN SHIPPING COMPANY S.A.", "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Carrier", "manual_update": "false", "key": "carrier_name", "path": "@029035bd>parsed_data>documents$0>details>carrier_name", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "BRITA SARL", "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Consignee Name", "manual_update": "false", "key": "consignee_name", "path": "@029035bd>parsed_data>documents$0>details>consignee_name", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "MSMU6039541", "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Container Number", "manual_update": "false", "key": "container_numbers", "path": "@029035bd>parsed_data>documents$0>details>container_numbers", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "date", "error": "", "value": null, "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "ETD", "manual_update": "false", "key": "etd", "path": "@029035bd>parsed_data>documents$0>details>etd", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": null, "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Final Discharge Place", "manual_update": "false", "key": "place_of_delivery", "path": "@029035bd>parsed_data>documents$0>details>place_of_delivery", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "123", "required": true, "ai_updated": "false", "updated_at": "2026-05-04T10:51:56.469+05:30", "updated_by": "rishi.yadav@unilever.com", "display_name": "Freight Clause", "manual_update": "true", "key": "freight_clause", "path": "@029035bd>parsed_data>documents$0>details>freight_clause", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "33072010,33072090", "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "HS Code", "manual_update": "false", "key": "hs_codes", "path": "@029035bd>parsed_data>documents$0>details>hs_codes", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "TAMATAVE", "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Port of Destination", "manual_update": "false", "key": "port_of_discharge", "path": "@029035bd>parsed_data>documents$0>details>port_of_discharge", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "string", "error": "", "value": "DURBAN", "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Port of Loading", "manual_update": "false", "key": "port_of_origin", "path": "@029035bd>parsed_data>documents$0>details>port_of_origin", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "number", "error": "", "value": 1628, "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Quantity", "manual_update": "false", "key": "quantity", "path": "@029035bd>parsed_data>documents$0>details>quantity", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "number", "error": "", "value": 56.756, "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Total CBM", "manual_update": "false", "key": "volumetric_weight", "path": "@029035bd>parsed_data>documents$0>details>volumetric_weight", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "number", "error": "", "value": 17632.316, "required": true, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Total Gross Weight", "manual_update": "false", "key": "gross_weight", "path": "@029035bd>parsed_data>documents$0>details>gross_weight", "source": "029035bd-4609-44e2-8725-07132a9bca3c" },
+        { "type": "number", "error": "", "value": null, "required": false, "ai_updated": "false", "updated_at": null, "updated_by": "", "display_name": "Total Net Weight", "manual_update": "false", "key": "net_weight", "path": "@029035bd>parsed_data>documents$0>details>net_weight", "source": "029035bd-4609-44e2-8725-07132a9bca3c" }
+      ],
+      "has_error": false
+    },
+    "line_items": {}
+  },
+  "verification_enabled": true,
+  "dv_modal_label": "Validation",
+  "tooltip_text": "",
+  "remarks": null,
+  "action": {
+    "next": { "enabled": true, "visibility": true, "display_name": "Next", "tooltip_text": "" },
+    "retry": { "enabled": false, "visibility": false, "display_name": "Retry", "tooltip_text": "" }
+  },
+  "updated_at": "2026-05-04T10:50:08.712+05:30",
+  "status": "validation_error",
+  "document_details": {
+    "029035bd-4609-44e2-8725-07132a9bca3c": {
+      "name": "Draft-Bill-of-Lading.pdf",
+      "link": "https://unilever.staging.gocomet.com/files/aa37c368a511197a10d4314d5bf2acfda0bef9b7/Draft-Bill-of-Lading---SWB.pdf",
+      "id": "029035bd-4609-44e2-8725-07132a9bca3c"
+    }
+  },
+  "progress_details": {
+    "percentage": 86.95652173913044,
+    "fields_not_fetched": 3,
+    "total_fields": 23,
+    "mandatory_fields_not_fetched": 0,
+    "total_mandatory_fields": 10
+  }
+}

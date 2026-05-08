@@ -49,22 +49,23 @@ export function Modal({ open, onOpenChange, title, description, size = 'md', clo
             'fixed left-1/2 top-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2',
             'bg-background rounded-lg shadow-lg p-6',
             'focus:outline-none',
+            'flex flex-col',
             sizeMap[size],
             className,
           )}
         >
           {title && (
-            <Dialog.Title className="text-lg font-semibold leading-none tracking-tight mb-2">
+            <Dialog.Title className="text-lg font-semibold leading-none tracking-tight mb-2 shrink-0">
               {title}
             </Dialog.Title>
           )}
           {description && (
-            <Dialog.Description className="text-sm text-muted-foreground mb-4">
+            <Dialog.Description className="text-sm text-muted-foreground mb-4 shrink-0">
               {description}
             </Dialog.Description>
           )}
-          <div>{children}</div>
-          {footer && <div className="mt-6 flex justify-end gap-2">{footer}</div>}
+          <div className="flex-1 min-h-0 overflow-auto -mx-6 px-6">{children}</div>
+          {footer && <div className="mt-6 flex justify-end gap-2 shrink-0">{footer}</div>}
           <Dialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
