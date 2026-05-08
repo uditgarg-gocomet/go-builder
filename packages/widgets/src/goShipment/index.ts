@@ -27,3 +27,26 @@ export {
   type CancelShipmentErrorEventPayload,
   type CancelShipmentCloseEventPayload,
 } from './CancelShipmentModal/index.js'
+
+export {
+  AddDocumentModal,
+  addDocumentModalManifest,
+  addDocumentModalPropsSchema,
+  fetchOptions as fetchAddDocumentOptions,
+  submitAddDocument,
+  DEFAULT_TENANT_SLUG,
+  MOCK_DOCUMENT_OPTIONS,
+  ADD_DOCUMENT_DEFAULTS,
+  ADD_DOCUMENT_ROUTES,
+  ADD_DOCUMENT_EVENTS,
+  type AddDocumentModalProps,
+  type AddDocumentSubmitPayload,
+  type AddDocumentSubmitResult,
+  type DocumentOption,
+  type AddDocumentSuccessPayload,
+  type AddDocumentErrorPayload,
+  type AddDocumentCancelPayload,
+  type AddDocumentSuccessEventPayload,
+  type AddDocumentErrorEventPayload,
+  type AddDocumentCloseEventPayload,
+} from './AddDocumentModal/index.js'
