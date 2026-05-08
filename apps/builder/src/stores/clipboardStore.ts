@@ -3,31 +3,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CanvasNode, CanvasState, ClipboardEntry } from '@/types/canvas'
-
-function remapIds(
-  subtree: ClipboardEntry['subtree']
-): ClipboardEntry['subtree'] {
-  const idMap = new Map<string, string>()
-  for (const id of Object.keys(subtree.nodes)) {
-    idMap.set(id, crypto.randomUUID())
-  }
-
-  const nodes: Record<string, CanvasNode> = {}
-  for (const [oldId, node] of Object.entries(subtree.nodes)) {
-    const newId = idMap.get(oldId)!
-    nodes[newId] = { ...node, id: newId }
-  }
-
-  const childMap: Record<string, string[]> = {}
-  for (const [oldId, children] of Object.entries(subtree.childMap)) {
-    const newId = idMap.get(oldId) ?? oldId
-    childMap[newId] = children.map(c => idMap.get(c) ?? c)
-  }
-
-  const newRootId = idMap.get(subtree.rootId) ?? subtree.rootId
-
-  return { nodes, rootId: newRootId, childMap }
-}
+import { remapSubtreeIds } from '@/lib/schema/remapSubtreeIds'
 
 function extractSubtree(
   nodeId: string,
@@ -70,7 +46,7 @@ export const useClipboardStore = create<ClipboardStore>()(
       paste: (targetParentId, position) => {
         const { clipboard } = get()
         if (!clipboard) return null
-        const remapped = remapIds(clipboard.subtree)
+        const remapped = remapSubtreeIds(clipboard.subtree)
         // caller is responsible for calling canvasStore.insertSubtree
         void targetParentId
         void position

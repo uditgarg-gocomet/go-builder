@@ -36,6 +36,7 @@ export type WidgetPermissions = z.infer<typeof WidgetPermissionsSchema>
 export const ComponentManifestSchema = z.object({
   displayName: z.string(),
   category: z.string(),
+  group: z.string().optional(),
   description: z.string(),
   icon: z.string().optional(),
   tags: z.array(z.string()),
@@ -54,11 +55,13 @@ export const RegistryEntryVersionSchema = z.object({
   displayName: z.string(),
   description: z.string().optional(),
   category: z.string(),
+  group: z.string().optional(),
   icon: z.string().optional(),
   thumbnail: z.string().optional(),
   tags: z.array(z.string()),
   changelog: z.string().optional(),
   publishedAt: z.coerce.date(),
+  releasedAt: z.coerce.date().optional(),
   publishedBy: z.string(),
   permissions: WidgetPermissionsSchema.optional(),
 })

@@ -55,8 +55,20 @@ export function AppHeader({ config, appSlug, logoUrl }: AppHeaderProps): React.R
 
       <div className="flex-1" />
 
-      {config.showUserMenu && user && (
-        <UserMenu user={user} onLogout={() => void logout(appSlug)} />
+      {config.showUserMenu && (
+        user ? (
+          <UserMenu user={user} onLogout={() => void logout(appSlug)} />
+        ) : (
+          // Fallback when user hasn't hydrated yet — still show a visible
+          // sign-in button so users aren't stranded on a rendered page with
+          // no way to authenticate.
+          <a
+            href={`/${appSlug}/login`}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Sign in
+          </a>
+        )
       )}
     </header>
   )
@@ -67,25 +79,43 @@ export function AppHeader({ config, appSlug, logoUrl }: AppHeaderProps): React.R
 function UserMenu({ user, onLogout }: { user: { email: string; id: string }; onLogout: () => void }): React.ReactElement {
   const [open, setOpen] = useState(false)
 
+  const initial = ((user.email || user.id).charAt(0) || '?').toUpperCase()
+  const displayName = user.email || user.id
+
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 rounded px-2 py-1 hover:bg-accent"
+        // Explicit border + chevron so the control is obviously interactive.
+        // Previously it was just a bare coloured circle and users couldn't
+        // tell it was clickable.
+        className="flex items-center gap-2 rounded-md border border-input bg-background px-2 py-1 hover:bg-accent"
         aria-haspopup="menu"
         aria-expanded={open}
+        title={displayName}
       >
-        <div className="h-7 w-7 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-medium">
-          {(user.email || user.id).charAt(0).toUpperCase()}
-        </div>
+        <span className="h-7 w-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
+          {initial}
+        </span>
+        <span className="hidden sm:inline text-xs text-foreground max-w-[140px] truncate">
+          {displayName}
+        </span>
+        <svg
+          className="h-3 w-3 text-muted-foreground shrink-0"
+          viewBox="0 0 12 12"
+          fill="none"
+          aria-hidden
+        >
+          <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-1 w-56 rounded border border-border bg-card shadow-md z-50 py-1">
             <div className="px-3 py-2 text-xs text-muted-foreground truncate border-b border-border">
-              {user.email || user.id}
+              {displayName}
             </div>
             <button
               type="button"

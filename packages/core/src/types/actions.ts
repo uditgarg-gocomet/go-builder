@@ -151,6 +151,11 @@ export const ActionDefSchema = z.object({
   type: ActionTypeSchema,
   config: z.record(z.string(), z.unknown()),
   outcomes: ActionOutcomeSchema.optional(),
+  // When set, the action only runs if the current user has at least one of
+  // these group memberships. Otherwise the executor short-circuits with a
+  // DENIED log entry and a toast. The page node's `actions[].trigger` still
+  // fires — the check happens inside the executor so denials are recorded.
+  requireGroups: z.array(z.string()).optional(),
 })
 
 // ── ActionBinding + ActionTrigger ─────────────────────────────────────────────

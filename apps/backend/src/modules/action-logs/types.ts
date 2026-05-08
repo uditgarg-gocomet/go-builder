@@ -8,7 +8,7 @@ export const ActionLogEntrySchema = z.object({
   actionId: z.string().min(1),
   actionName: z.string().min(1),
   actionType: z.string().min(1),
-  status: z.enum(['SUCCESS', 'ERROR']),
+  status: z.enum(['SUCCESS', 'ERROR', 'DENIED']),
   durationMs: z.number().int().nonnegative(),
   error: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -27,7 +27,7 @@ export const QueryFiltersSchema = z.object({
   appId: z.string().min(1),
   pageId: z.string().optional(),
   userId: z.string().optional(),
-  status: z.enum(['SUCCESS', 'ERROR']).optional(),
+  status: z.enum(['SUCCESS', 'ERROR', 'DENIED']).optional(),
   limit: z.coerce.number().int().positive().default(50),
 })
 

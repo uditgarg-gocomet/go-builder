@@ -8,11 +8,74 @@ interface PrimitiveDefinition {
   displayName: string
   description: string
   category: string
+  // Optional so widget entries (which only need `category`) can share this
+  // shape without a parallel interface.
+  group?: string
   icon: string
   tags: string[]
   propsSchema: Record<string, unknown>
   defaultProps: Record<string, unknown>
+  releasedAt?: Date
+  // Prebuilt views ship a canvas subtree that gets cloned (with fresh node IDs)
+  // onto the builder canvas at import time. Set only on `views` entries.
+  viewSchema?: ViewSchema
 }
+
+// ── View tree builder ─────────────────────────────────────────────────────────
+// Views are stored as a flat node map + childMap so the builder can drop them
+// in via insertSubtree without further parsing. The `buildViewSchema` helper
+// lets seed authors write the tree in nested form for readability.
+interface ViewNodeShape {
+  id: string
+  type: string
+  source: 'primitive' | 'custom_widget' | 'prebuilt_view'
+  props: Record<string, unknown>
+  bindings: Record<string, string>
+  actions: unknown[]
+  style: Record<string, unknown>
+  responsive: Record<string, unknown>
+}
+
+interface ViewSchema {
+  nodes: Record<string, ViewNodeShape>
+  rootId: string
+  childMap: Record<string, string[]>
+}
+
+interface ViewSpec {
+  id: string
+  type: string
+  props?: Record<string, unknown>
+  children?: ViewSpec[]
+}
+
+function buildViewSchema(root: ViewSpec): ViewSchema {
+  const nodes: Record<string, ViewNodeShape> = {}
+  const childMap: Record<string, string[]> = {}
+
+  function walk(spec: ViewSpec): void {
+    nodes[spec.id] = {
+      id: spec.id,
+      type: spec.type,
+      source: 'primitive',
+      props: spec.props ?? {},
+      bindings: {},
+      actions: [],
+      style: {},
+      responsive: {},
+    }
+    childMap[spec.id] = (spec.children ?? []).map(c => c.id)
+    for (const child of spec.children ?? []) walk(child)
+  }
+
+  walk(root)
+  return { nodes, rootId: root.id, childMap }
+}
+
+// Mark components released within this window as "New" in the builder picker.
+// Seeded dates are relative to a fixed anchor so local dev gets deterministic
+// badge behavior regardless of when the seed is run.
+const RECENT_RELEASE = new Date('2026-04-20T00:00:00Z')
 
 const primitives: PrimitiveDefinition[] = [
   // ── Layout ──────────────────────────────────────────────────────────────────
@@ -21,6 +84,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Stack',
     description: 'Flex container for vertical or horizontal layouts',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'layout-stack',
     tags: ['layout', 'flex', 'container'],
     propsSchema: {
@@ -41,6 +105,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Grid',
     description: 'CSS grid container with configurable columns and gap',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'layout-grid',
     tags: ['layout', 'grid', 'columns'],
     propsSchema: {
@@ -59,6 +124,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Divider',
     description: 'Horizontal or vertical rule for separating content',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'minus',
     tags: ['layout', 'separator', 'rule'],
     propsSchema: {
@@ -75,6 +141,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Card',
     description: 'Surface container with optional header and footer',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'square',
     tags: ['layout', 'surface', 'container', 'card'],
     propsSchema: {
@@ -94,6 +161,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Tabs',
     description: 'Tabbed content panels',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'panel-top',
     tags: ['layout', 'tabs', 'navigation'],
     propsSchema: {
@@ -121,8 +189,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Accordion',
     description: 'Collapsible sections — single or multiple open at once',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'chevrons-up-down',
     tags: ['layout', 'accordion', 'collapse', 'expand'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -148,6 +218,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Modal',
     description: 'Accessible dialog with controlled open state',
     category: 'Layout',
+    group: 'Layouts',
     icon: 'maximize-2',
     tags: ['layout', 'modal', 'dialog', 'popup'],
     propsSchema: {
@@ -169,6 +240,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Data Table',
     description: 'Tabular data with sorting, pagination, and search',
     category: 'Data',
+    group: 'Data',
     icon: 'table',
     tags: ['data', 'table', 'grid', 'list'],
     propsSchema: {
@@ -203,6 +275,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Chart',
     description: 'Line, bar, pie, and area charts powered by Recharts',
     category: 'Data',
+    group: 'Data',
     icon: 'bar-chart-2',
     tags: ['data', 'chart', 'graph', 'visualization'],
     propsSchema: {
@@ -225,8 +298,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Stat Card',
     description: 'Metric card with optional trend indicator',
     category: 'Data',
+    group: 'Data',
     icon: 'trending-up',
     tags: ['data', 'metric', 'kpi', 'stat'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -246,6 +321,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Badge',
     description: 'Small status or count indicator',
     category: 'Data',
+    group: 'Data',
     icon: 'tag',
     tags: ['data', 'badge', 'status', 'label'],
     propsSchema: {
@@ -263,6 +339,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Avatar',
     description: 'User avatar with image or fallback initials',
     category: 'Data',
+    group: 'Data',
     icon: 'user-circle',
     tags: ['data', 'avatar', 'user', 'profile'],
     propsSchema: {
@@ -282,6 +359,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Tag',
     description: 'Removable label tag',
     category: 'Data',
+    group: 'Data',
     icon: 'tag',
     tags: ['data', 'tag', 'chip', 'label'],
     propsSchema: {
@@ -302,6 +380,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Text Input',
     description: 'Single-line text input with label and helper text',
     category: 'Input',
+    group: 'Inputs',
     icon: 'type',
     tags: ['input', 'form', 'text', 'field'],
     propsSchema: {
@@ -325,6 +404,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Number Input',
     description: 'Numeric input with min, max, and step controls',
     category: 'Input',
+    group: 'Inputs',
     icon: 'hash',
     tags: ['input', 'form', 'number', 'field'],
     propsSchema: {
@@ -347,6 +427,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Select',
     description: 'Single-value dropdown select with search',
     category: 'Input',
+    group: 'Inputs',
     icon: 'chevron-down-circle',
     tags: ['input', 'form', 'select', 'dropdown'],
     propsSchema: {
@@ -376,6 +457,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Multi Select',
     description: 'Multiple-value select with tag display',
     category: 'Input',
+    group: 'Inputs',
     icon: 'list-checks',
     tags: ['input', 'form', 'select', 'multi'],
     propsSchema: {
@@ -404,8 +486,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Date Picker',
     description: 'Calendar date or date-range picker',
     category: 'Input',
+    group: 'Inputs',
     icon: 'calendar',
     tags: ['input', 'form', 'date', 'calendar'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -425,6 +509,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Checkbox',
     description: 'Checkbox input with label and indeterminate state',
     category: 'Input',
+    group: 'Inputs',
     icon: 'check-square',
     tags: ['input', 'form', 'checkbox', 'boolean'],
     propsSchema: {
@@ -445,6 +530,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Toggle',
     description: 'Switch toggle with label',
     category: 'Input',
+    group: 'Inputs',
     icon: 'toggle-left',
     tags: ['input', 'form', 'toggle', 'switch', 'boolean'],
     propsSchema: {
@@ -464,6 +550,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Radio Group',
     description: 'Group of mutually exclusive radio options',
     category: 'Input',
+    group: 'Inputs',
     icon: 'circle-dot',
     tags: ['input', 'form', 'radio', 'group'],
     propsSchema: {
@@ -491,6 +578,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Textarea',
     description: 'Multi-line text input with resize and character count',
     category: 'Input',
+    group: 'Inputs',
     icon: 'align-left',
     tags: ['input', 'form', 'textarea', 'text', 'multiline'],
     propsSchema: {
@@ -514,8 +602,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'File Upload',
     description: 'Drag-and-drop file upload with progress',
     category: 'Input',
+    group: 'Inputs',
     icon: 'upload-cloud',
     tags: ['input', 'form', 'file', 'upload'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -537,6 +627,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Button',
     description: 'Action button with variants and loading state',
     category: 'Action',
+    group: 'Buttons',
     icon: 'square',
     tags: ['action', 'button', 'click', 'cta'],
     propsSchema: {
@@ -558,8 +649,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Icon Button',
     description: 'Square icon button with accessible label',
     category: 'Action',
+    group: 'Buttons',
     icon: 'circle',
     tags: ['action', 'button', 'icon'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -579,6 +672,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Link',
     description: 'Navigable link with variant styles',
     category: 'Action',
+    group: 'Buttons',
     icon: 'external-link',
     tags: ['action', 'link', 'navigate', 'anchor'],
     propsSchema: {
@@ -598,8 +692,10 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Dropdown Menu',
     description: 'Contextual menu triggered by a button',
     category: 'Action',
+    group: 'Buttons',
     icon: 'menu',
     tags: ['action', 'dropdown', 'menu', 'context'],
+    releasedAt: RECENT_RELEASE,
     propsSchema: {
       type: 'object',
       properties: {
@@ -630,6 +726,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Alert',
     description: 'Informational alert banner with dismiss support',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'alert-circle',
     tags: ['feedback', 'alert', 'notification', 'banner'],
     propsSchema: {
@@ -649,6 +746,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Toast',
     description: 'Temporary notification toast message',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'bell',
     tags: ['feedback', 'toast', 'notification', 'snackbar'],
     propsSchema: {
@@ -667,6 +765,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Spinner',
     description: 'Loading spinner with size variants',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'loader',
     tags: ['feedback', 'spinner', 'loading', 'progress'],
     propsSchema: {
@@ -684,6 +783,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Skeleton',
     description: 'Loading placeholder skeleton block',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'square-dashed',
     tags: ['feedback', 'skeleton', 'loading', 'placeholder'],
     propsSchema: {
@@ -702,6 +802,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Empty State',
     description: 'Empty state with icon, title, description, and optional action',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'inbox',
     tags: ['feedback', 'empty', 'placeholder', 'no-data'],
     propsSchema: {
@@ -721,6 +822,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Error Boundary',
     description: 'Catches component errors and shows a fallback',
     category: 'Feedback',
+    group: 'Feedback',
     icon: 'shield-alert',
     tags: ['feedback', 'error', 'boundary', 'fallback'],
     propsSchema: {
@@ -740,6 +842,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Heading',
     description: 'Semantic heading — h1 through h6',
     category: 'Typography',
+    group: 'Typography',
     icon: 'heading',
     tags: ['typography', 'heading', 'title', 'h1', 'h2'],
     propsSchema: {
@@ -759,6 +862,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Text',
     description: 'Paragraph or inline text with size variants',
     category: 'Typography',
+    group: 'Typography',
     icon: 'type',
     tags: ['typography', 'text', 'paragraph', 'body'],
     propsSchema: {
@@ -778,6 +882,7 @@ const primitives: PrimitiveDefinition[] = [
     displayName: 'Rich Text',
     description: 'Rich text display powered by TipTap',
     category: 'Typography',
+    group: 'Typography',
     icon: 'file-text',
     tags: ['typography', 'richtext', 'html', 'editor'],
     propsSchema: {
@@ -788,6 +893,197 @@ const primitives: PrimitiveDefinition[] = [
       },
     },
     defaultProps: { content: '' },
+  },
+]
+
+// ── Prebuilt views ────────────────────────────────────────────────────────────
+// Compositions of widgets saved in the library. FDEs can drag these onto the
+// canvas to get a full page layout rather than assembling from scratch.
+// Views have no configurable props — they are templates, expanded into
+// individual editable child components on import. propsSchema/defaultProps
+// stay empty; the tree lives in `viewSchema`.
+const EMPTY_PROPS_SCHEMA = { type: 'object', properties: {} } as const
+
+const views: PrimitiveDefinition[] = [
+  {
+    name: 'HomeView',
+    displayName: 'Home',
+    description: 'Dashboard landing page — KPI stat cards, recent activity table, and welcome heading. Imports as editable components.',
+    category: 'Logistics',
+    group: 'Logistics',
+    icon: 'home',
+    tags: ['view', 'home', 'dashboard', 'kpi', 'landing'],
+    propsSchema: EMPTY_PROPS_SCHEMA,
+    defaultProps: {},
+    viewSchema: buildViewSchema({
+      id: 'home-root',
+      type: 'Stack',
+      props: { direction: 'vertical', gap: 6, align: 'stretch', justify: 'start' },
+      children: [
+        { id: 'home-h1', type: 'Heading', props: { text: 'Welcome', level: 'h1', size: '2xl', weight: 'bold' } },
+        {
+          id: 'home-stats',
+          type: 'Grid',
+          props: { columns: 4, gap: 4, align: 'stretch' },
+          children: [
+            { id: 'home-stat-1', type: 'StatCard', props: { label: 'Active Shipments', value: '128', trend: 'neutral', format: 'number' } },
+            { id: 'home-stat-2', type: 'StatCard', props: { label: 'In Transit', value: '42', trend: 'up', format: 'number' } },
+            { id: 'home-stat-3', type: 'StatCard', props: { label: 'Delivered Today', value: '17', trend: 'up', format: 'number' } },
+            { id: 'home-stat-4', type: 'StatCard', props: { label: 'Exceptions', value: '3', trend: 'down', format: 'number' } },
+          ],
+        },
+        { id: 'home-h2', type: 'Heading', props: { text: 'Recent Activity', level: 'h2', size: 'lg', weight: 'semibold' } },
+        {
+          id: 'home-table',
+          type: 'DataTable',
+          props: {
+            title: 'Recent Shipments',
+            columns: [
+              { key: 'id', label: 'Shipment ID', sortable: true },
+              { key: 'origin', label: 'Origin', sortable: true },
+              { key: 'destination', label: 'Destination', sortable: true },
+              { key: 'status', label: 'Status', sortable: false },
+            ],
+            pageSize: 10,
+            striped: true,
+            searchable: false,
+            exportable: false,
+          },
+        },
+      ],
+    }),
+  },
+  {
+    name: 'ShipmentListView',
+    displayName: 'Shipment List',
+    description: 'Paginated table of shipments with search, status filter, and date-range filter. Imports as editable components.',
+    category: 'Logistics',
+    group: 'Logistics',
+    icon: 'list',
+    tags: ['view', 'shipment', 'list', 'table', 'logistics'],
+    propsSchema: EMPTY_PROPS_SCHEMA,
+    defaultProps: {},
+    viewSchema: buildViewSchema({
+      id: 'shiplist-root',
+      type: 'Stack',
+      props: { direction: 'vertical', gap: 4, align: 'stretch', justify: 'start' },
+      children: [
+        { id: 'shiplist-h1', type: 'Heading', props: { text: 'Shipments', level: 'h1', size: '2xl', weight: 'bold' } },
+        {
+          id: 'shiplist-filters',
+          type: 'Stack',
+          props: { direction: 'horizontal', gap: 3, align: 'center', justify: 'start', wrap: true },
+          children: [
+            { id: 'shiplist-search', type: 'TextInput', props: { label: '', placeholder: 'Search shipments…', prefix: '', suffix: '' } },
+            {
+              id: 'shiplist-status',
+              type: 'Select',
+              props: {
+                label: '',
+                placeholder: 'Status',
+                options: [
+                  { value: 'all', label: 'All' },
+                  { value: 'in_transit', label: 'In Transit' },
+                  { value: 'delivered', label: 'Delivered' },
+                  { value: 'delayed', label: 'Delayed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ],
+                searchable: false,
+              },
+            },
+            { id: 'shiplist-date', type: 'DatePicker', props: { label: '', mode: 'range', placeholder: 'Date range' } },
+          ],
+        },
+        {
+          id: 'shiplist-table',
+          type: 'DataTable',
+          props: {
+            title: '',
+            columns: [
+              { key: 'id', label: 'Shipment ID', sortable: true },
+              { key: 'origin', label: 'Origin', sortable: true },
+              { key: 'destination', label: 'Destination', sortable: true },
+              { key: 'eta', label: 'ETA', sortable: true },
+              { key: 'status', label: 'Status', sortable: false },
+            ],
+            pageSize: 20,
+            striped: true,
+            searchable: true,
+            exportable: true,
+          },
+        },
+      ],
+    }),
+  },
+  {
+    name: 'ShipmentDetailsView',
+    displayName: 'Shipment Details',
+    description: 'Full detail page for a single shipment — header with status badge, overview / status cards, timeline table, and documents table.',
+    category: 'Logistics',
+    group: 'Logistics',
+    icon: 'package',
+    tags: ['view', 'shipment', 'details', 'logistics', 'timeline'],
+    propsSchema: EMPTY_PROPS_SCHEMA,
+    defaultProps: {},
+    viewSchema: buildViewSchema({
+      id: 'shipdet-root',
+      type: 'Stack',
+      props: { direction: 'vertical', gap: 6, align: 'stretch', justify: 'start' },
+      children: [
+        {
+          id: 'shipdet-header',
+          type: 'Stack',
+          props: { direction: 'horizontal', gap: 3, align: 'center', justify: 'between' },
+          children: [
+            { id: 'shipdet-h1', type: 'Heading', props: { text: 'Shipment SHP-00128', level: 'h1', size: '2xl', weight: 'bold' } },
+            { id: 'shipdet-badge', type: 'Badge', props: { label: 'In Transit', variant: 'info' } },
+          ],
+        },
+        {
+          id: 'shipdet-grid',
+          type: 'Grid',
+          props: { columns: 2, gap: 4, align: 'stretch' },
+          children: [
+            { id: 'shipdet-overview', type: 'Card', props: { title: 'Overview', description: 'Origin, destination, and carrier details', padding: 'md', shadow: 'sm' } },
+            { id: 'shipdet-status', type: 'Card', props: { title: 'Status', description: 'Current location and ETA', padding: 'md', shadow: 'sm' } },
+          ],
+        },
+        { id: 'shipdet-h2', type: 'Heading', props: { text: 'Timeline', level: 'h2', size: 'lg', weight: 'semibold' } },
+        {
+          id: 'shipdet-timeline',
+          type: 'DataTable',
+          props: {
+            title: '',
+            columns: [
+              { key: 'timestamp', label: 'Time', sortable: true },
+              { key: 'event', label: 'Event', sortable: false },
+              { key: 'location', label: 'Location', sortable: false },
+            ],
+            pageSize: 10,
+            striped: false,
+            searchable: false,
+            exportable: false,
+          },
+        },
+        { id: 'shipdet-h3', type: 'Heading', props: { text: 'Documents', level: 'h2', size: 'lg', weight: 'semibold' } },
+        {
+          id: 'shipdet-documents',
+          type: 'DataTable',
+          props: {
+            title: '',
+            columns: [
+              { key: 'name', label: 'Document', sortable: true },
+              { key: 'type', label: 'Type', sortable: true },
+              { key: 'uploadedAt', label: 'Uploaded', sortable: true },
+            ],
+            pageSize: 5,
+            striped: false,
+            searchable: false,
+            exportable: true,
+          },
+        },
+      ],
+    }),
   },
 ]
 
@@ -809,15 +1105,42 @@ async function seed() {
   console.log('Seeding component registry...')
 
   let created = 0
+  let updated = 0
   let skipped = 0
 
   for (const primitive of primitives) {
     const existing = await prisma.registryEntry.findFirst({
       where: { name: primitive.name, scope: 'COMMON' },
+      include: {
+        versions: {
+          orderBy: { publishedAt: 'desc' },
+          take: 1,
+        },
+      },
     })
 
     if (existing) {
-      skipped++
+      // Keep the current version row in sync with the seed definition so
+      // re-running the seed after schema changes (e.g. new `group` /
+      // `releasedAt` fields) backfills existing deployments without needing
+      // a bespoke migration script. Only metadata is touched; propsSchema
+      // and defaultProps are left alone to avoid surprising version drift.
+      const currentVersion = existing.versions[0]
+      if (currentVersion) {
+        await prisma.registryEntryVersion.update({
+          where: { id: currentVersion.id },
+          data: {
+            displayName: primitive.displayName,
+            description: primitive.description,
+            category: primitive.category,
+            group: primitive.group ?? null,
+            icon: primitive.icon,
+            tags: primitive.tags,
+            releasedAt: primitive.releasedAt ?? null,
+          },
+        })
+        updated++
+      }
       continue
     }
 
@@ -843,8 +1166,10 @@ async function seed() {
         displayName: primitive.displayName,
         description: primitive.description,
         category: primitive.category,
+        group: primitive.group ?? null,
         icon: primitive.icon,
         tags: primitive.tags,
+        releasedAt: primitive.releasedAt ?? null,
         publishedBy: 'seed',
       },
     })
@@ -893,8 +1218,77 @@ async function seed() {
     created++
   }
 
-  console.log(`Registry seeded: ${created} created, ${skipped} already exist`)
-  console.log(`Total primitives: ${primitives.length}, widgets: ${widgets.length}`)
+  for (const view of views) {
+    const existing = await prisma.registryEntry.findFirst({
+      where: { name: view.name, scope: 'COMMON' },
+      include: {
+        versions: {
+          orderBy: { publishedAt: 'desc' },
+          take: 1,
+        },
+      },
+    })
+
+    if (existing) {
+      const currentVersion = existing.versions[0]
+      if (currentVersion) {
+        // Re-running the seed should refresh the stored tree as well — view
+        // authors iterate on the composition; without this they'd have to
+        // bump the version row manually.
+        await prisma.registryEntryVersion.update({
+          where: { id: currentVersion.id },
+          data: {
+            displayName: view.displayName,
+            description: view.description,
+            category: view.category,
+            group: view.group ?? null,
+            icon: view.icon,
+            tags: view.tags,
+            propsSchema: view.propsSchema as Prisma.InputJsonValue,
+            defaultProps: view.defaultProps as Prisma.InputJsonValue,
+            viewSchema: (view.viewSchema ?? null) as Prisma.InputJsonValue,
+          },
+        })
+        updated++
+      }
+      continue
+    }
+
+    const entry = await prisma.registryEntry.create({
+      data: {
+        name: view.name,
+        type: 'PREBUILT_VIEW',
+        scope: 'COMMON',
+        status: 'ACTIVE',
+        currentVersion: '1.0.0',
+        sourceType: 'COMPOSED',
+        ownedBy: 'platform',
+        createdBy: 'seed',
+      },
+    })
+
+    await prisma.registryEntryVersion.create({
+      data: {
+        entryId: entry.id,
+        version: '1.0.0',
+        propsSchema: view.propsSchema as Prisma.InputJsonValue,
+        defaultProps: view.defaultProps as Prisma.InputJsonValue,
+        viewSchema: (view.viewSchema ?? null) as Prisma.InputJsonValue,
+        displayName: view.displayName,
+        description: view.description,
+        category: view.category,
+        group: view.group ?? null,
+        icon: view.icon,
+        tags: view.tags,
+        publishedBy: 'seed',
+      },
+    })
+
+    created++
+  }
+
+  console.log(`Registry seeded: ${created} created, ${updated} updated, ${skipped} skipped`)
+  console.log(`Total primitives: ${primitives.length}, widgets: ${widgets.length}, views: ${views.length}`)
 }
 
 seed()

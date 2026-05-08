@@ -28,11 +28,13 @@ type VersionRecord = {
   displayName: string
   description: string | null
   category: string
+  group: string | null
   icon: string | null
   thumbnail: string | null
   tags: string[]
   changelog: string | null
   publishedAt: Date
+  releasedAt: Date | null
   publishedBy: string
 }
 
@@ -176,8 +178,8 @@ function seedVersion(entryId: string, version = '1.0.0', propsSchema: object = {
     id: nextId(), entryId, version,
     propsSchema, defaultProps: {}, bundleUrl: null, bundleHash: null, viewSchema: null,
     displayName: 'Test', description: null, category: 'Test',
-    icon: null, thumbnail: null, tags: [], changelog: null,
-    publishedAt: new Date(), publishedBy: 'seed',
+    group: null, icon: null, thumbnail: null, tags: [], changelog: null,
+    publishedAt: new Date(), releasedAt: null, publishedBy: 'seed',
   }
   versions.set(record.id, record)
   return record

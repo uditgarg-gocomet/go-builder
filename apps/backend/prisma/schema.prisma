@@ -249,11 +249,20 @@ model RegistryEntryVersion {
   displayName  String
   description  String?
   category     String
+  // Optional functional group for the component picker (e.g. "Buttons",
+  // "Data", "Layouts"). Falls back to `category` when null. Distinct from
+  // `category` because the picker groups are broader than the taxonomy used
+  // for filtering/tagging.
+  group        String?
   icon         String?
   thumbnail    String?
   tags         String[]
   changelog    String?
   publishedAt  DateTime      @default(now())
+  // When the version was released to end-users. Used by the builder to show
+  // a "New" badge in the component picker for a rolling window. Nullable so
+  // existing/legacy primitives don't surface a badge.
+  releasedAt   DateTime?
   publishedBy  String
 
   entry        RegistryEntry @relation(fields: [entryId], references: [id])
@@ -554,6 +563,7 @@ model ActionExecutionLog {
 enum ActionStatus {
   SUCCESS
   ERROR
+  DENIED
 }
 
 // ─── Comments ─────────────────────────────────────────────────────────────────

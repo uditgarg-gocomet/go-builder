@@ -46,6 +46,7 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
   const [error, setError] = useState<string | null>(null)
   const [promoting, setPromoting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [publishAll, setPublishAll] = useState(false)
 
   // Load history to find current draft
   useEffect(() => {
@@ -64,7 +65,10 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
   const newVersion = currentVersion ? bumpVersion(currentVersion.version, bumpType) : '0.1.0'
 
   const handlePromote = async (): Promise<void> => {
-    if (!draftVersionId) { setError('No draft version to promote. Save the canvas first.'); return }
+    if (!publishAll && !draftVersionId) {
+      setError('No draft version to promote. Save the canvas first.')
+      return
+    }
     if (!changelog.trim()) { setError('Changelog is required.'); return }
 
     setPromoting(true)
@@ -72,9 +76,9 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
     setBuildStatus('PENDING')
 
     try {
-      const path = env === 'staging'
-        ? `/schema/${draftVersionId}/promote/staging`
-        : `/schema/${draftVersionId}/promote/production`
+      const path = publishAll
+        ? `/schema/apps/${appId}/promote/${env}`
+        : `/schema/${draftVersionId}/promote/${env}`
 
       const data = await clientFetch<{ deployment?: { id: string } }>(path, {
         method: 'POST',
@@ -99,8 +103,9 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
       } else {
         setBuildStatus('SUCCESS')
       }
-    } catch {
-      setError('Network error')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Network error'
+      setError(message)
       setBuildStatus('idle')
     } finally {
       setPromoting(false)
@@ -140,11 +145,16 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
           <button type="button" onClick={onClose} className="text-xl text-muted-foreground hover:text-foreground">×</button>
         </div>
 
-        {/* Current version */}
-        {currentVersion && (
+        {/* Current version (per-page only — hidden when publishing all pages) */}
+        {currentVersion && !publishAll && (
           <div className="rounded border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             Current: <span className="font-mono font-medium text-foreground">v{currentVersion.version}</span>
             <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px]">{currentVersion.status}</span>
+          </div>
+        )}
+        {publishAll && (
+          <div className="rounded border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Promoting <span className="font-medium text-foreground">{pages.length}</span> page{pages.length === 1 ? '' : 's'} — each gets a {bumpType} bump from its current version.
           </div>
         )}
 
@@ -167,9 +177,11 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
-            New version: <span className="font-mono font-medium text-foreground">v{newVersion}</span>
-          </p>
+          {!publishAll && (
+            <p className="text-xs text-muted-foreground">
+              New version: <span className="font-mono font-medium text-foreground">v{newVersion}</span>
+            </p>
+          )}
         </div>
 
         {/* Environment */}
@@ -206,6 +218,24 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
             className="rounded border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring resize-none"
           />
         </div>
+
+        {/* Publish all pages */}
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="checkbox"
+            checked={publishAll}
+            onChange={e => setPublishAll(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+          />
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-foreground">Publish all pages</span>
+            <span className="text-[11px] text-muted-foreground">
+              {env === 'staging'
+                ? 'Promotes every page with a draft. Pages without a draft keep their current staging version.'
+                : 'Promotes every staged page to production. Pages without a staged version keep their current production version.'}
+            </span>
+          </div>
+        </label>
 
         {/* Build status */}
         {buildStatus !== 'idle' && (
@@ -279,7 +309,7 @@ export function PromoteDialog({ appId, userId, onClose }: PromoteDialogProps): R
               disabled={promoting || !changelog.trim()}
               className="rounded bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
-              {promoting ? 'Publishing…' : `Publish to ${env}`}
+              {promoting ? 'Publishing…' : publishAll ? `Publish all to ${env}` : `Publish to ${env}`}
             </button>
           )}
         </div>

@@ -7,10 +7,12 @@ import { UserGroupPanel } from './UserGroupPanel'
 import { AssetPanel } from './AssetPanel'
 import { MembersPanel } from './MembersPanel'
 import { useAppStore } from '@/stores/appStore'
+import { usePageStore } from '@/stores/pageStore'
+import { JsonViewer } from '@/components/debug/JsonViewer'
 
 import { clientFetch } from '@/lib/clientFetch'
 
-type Tab = 'general' | 'theme' | 'auth' | 'groups' | 'assets' | 'members'
+type Tab = 'general' | 'theme' | 'auth' | 'groups' | 'assets' | 'members' | 'json'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'General' },
@@ -19,6 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'groups', label: 'User Groups' },
   { id: 'assets', label: 'Assets' },
   { id: 'members', label: 'Members' },
+  { id: 'json', label: 'JSON' },
 ]
 
 interface AppSettingsModalProps {
@@ -75,6 +78,42 @@ function GeneralPanel({ appId }: { appId: string }): React.ReactElement {
   )
 }
 
+/**
+ * Read-only inspector for the app's client-side state. Renders whatever is
+ * currently in the app + page stores — useful for sanity-checking what gets
+ * persisted and for grabbing config snapshots when filing bugs.
+ *
+ * Note: this is intentionally local store state only. It does not refetch
+ * from the backend, so values reflect what the builder is about to save, not
+ * necessarily what's on disk.
+ */
+function JsonPanel({ appId }: { appId: string }): React.ReactElement {
+  const app = useAppStore(s => s.app)
+  const pages = usePageStore(s => s.pages)
+  const activePageId = usePageStore(s => s.activePageId)
+
+  const value = {
+    appId,
+    app,
+    pages,
+    activePageId,
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">App Configuration</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Live snapshot of the app + page stores. Read-only.
+        </p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border">
+        <JsonViewer value={value} />
+      </div>
+    </div>
+  )
+}
+
 export function AppSettingsModal({ appId, onClose }: AppSettingsModalProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<Tab>('general')
 
@@ -121,6 +160,7 @@ export function AppSettingsModal({ appId, onClose }: AppSettingsModalProps): Rea
             {activeTab === 'groups' && <UserGroupPanel appId={appId} />}
             {activeTab === 'assets' && <AssetPanel appId={appId} />}
             {activeTab === 'members' && <MembersPanel appId={appId} />}
+            {activeTab === 'json' && <JsonPanel appId={appId} />}
           </div>
         </div>
       </div>

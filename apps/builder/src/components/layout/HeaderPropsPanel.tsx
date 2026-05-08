@@ -4,9 +4,12 @@ import React, { useCallback, useEffect, useRef } from 'react'
 import type { HeaderConfig } from '@portal/core'
 import { useAppStore, DEFAULT_HEADER_CONFIG } from '@/stores/appStore'
 import { useLayoutSelectionStore } from '@/stores/layoutSelectionStore'
+import { useSaveStatusStore } from '@/stores/saveStatusStore'
 import { clientFetch } from '@/lib/clientFetch'
+import { LogoPicker } from './LogoPicker'
 
 const SAVE_DEBOUNCE_MS = 800
+const SAVE_SLOT_KEY = 'chrome:header'
 
 interface HeaderPropsPanelProps {
   appId: string
@@ -21,6 +24,7 @@ export function HeaderPropsPanel({ appId }: HeaderPropsPanelProps): React.ReactE
   const setHeader = useAppStore(s => s.setHeaderConfig)
   const updateHeader = useAppStore(s => s.updateHeaderConfig)
   const clearSelection = useLayoutSelectionStore(s => s.clear)
+  const setSlot = useSaveStatusStore(s => s.setSlot)
 
   const effective: HeaderConfig = header ?? DEFAULT_HEADER_CONFIG
 
@@ -31,20 +35,28 @@ export function HeaderPropsPanel({ appId }: HeaderPropsPanelProps): React.ReactE
     if (timerRef.current) clearTimeout(timerRef.current)
     const fingerprint = JSON.stringify(next)
     if (fingerprint === lastSavedRef.current) return
+    // Surface "saving..." to the top-right indicator immediately — the actual
+    // PATCH fires after the debounce window.
+    setSlot(SAVE_SLOT_KEY, { status: 'saving', lastSavedAt: undefined, warning: undefined })
     timerRef.current = setTimeout(() => {
       void clientFetch(`/apps/${appId}/header`, {
         method: 'PATCH',
         body: JSON.stringify({ header: next }),
       }).then(() => {
         lastSavedRef.current = fingerprint
+        setSlot(SAVE_SLOT_KEY, { status: 'saved', lastSavedAt: new Date(), warning: undefined })
       }).catch(() => {
-        /* non-critical — next save attempt will retry */
+        setSlot(SAVE_SLOT_KEY, { status: 'error', lastSavedAt: undefined, warning: undefined })
       })
     }, SAVE_DEBOUNCE_MS)
-  }, [appId])
+  }, [appId, setSlot])
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    // Intentionally don't clear the slot — the user may close the panel and
+    // expect the "Saved 30s ago" status to remain visible in the top-right
+    // indicator. The slot is reset on next mount via the lastSavedRef
+    // fingerprint (below, in the first scheduleSave skip).
   }, [])
 
   const patch = (updates: Partial<HeaderConfig>): void => {
@@ -110,13 +122,11 @@ export function HeaderPropsPanel({ appId }: HeaderPropsPanelProps): React.ReactE
             />
           </Field>
 
-          <Field label="Logo asset id">
-            <input
-              type="text"
-              value={effective.logoAssetId ?? ''}
-              onChange={e => patch({ logoAssetId: e.target.value || undefined })}
-              placeholder="Asset id (use Assets panel to upload)"
-              className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-ring"
+          <Field label="Logo">
+            <LogoPicker
+              appId={appId}
+              value={effective.logoAssetId}
+              onChange={next => patch({ logoAssetId: next })}
             />
           </Field>
 

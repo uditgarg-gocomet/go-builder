@@ -39,6 +39,7 @@ function isPublicPath(pathname: string, appSlug: string): boolean {
 interface PortalToken extends JWTPayload {
   sub: string
   email?: string
+  groups?: string[]
   tokenFamily?: string
   appId?: string
   context?: string
@@ -164,13 +165,36 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // Inject user context into request headers for server components
-  const response = NextResponse.next()
-  if (payload.sub) response.headers.set('x-portal-user-id', payload.sub)
-  if (payload.appId) response.headers.set('x-portal-app-id', payload.appId)
-  response.headers.set('x-portal-token', token)
+  // Inject user context into request headers for server components.
+  //
+  // Next.js gotcha: `response.headers.set(...)` alone only affects response
+  // headers returned to the client — it does NOT forward them into the
+  // request the downstream Server Component sees via `headers()`. To mutate
+  // request headers the middleware has to build a new Headers object and
+  // pass it via `NextResponse.next({ request: { headers } })`.
+  const forwardedHeaders = new Headers(request.headers)
+  if (payload.sub) forwardedHeaders.set('x-portal-user-id', payload.sub)
+  if (payload.appId) forwardedHeaders.set('x-portal-app-id', payload.appId)
+  if (payload.email) forwardedHeaders.set('x-portal-user-email', String(payload.email))
+  if (Array.isArray(payload.groups)) {
+    forwardedHeaders.set('x-portal-user-groups', payload.groups.join(','))
+  }
+  forwardedHeaders.set('x-portal-token', token)
 
-  return response
+  // DEBUG — temporary
+  console.log('[middleware]', {
+    path: pathname,
+    sub: payload.sub,
+    email: payload.email,
+    groups: payload.groups,
+    setHeaders: {
+      'x-portal-user-id': payload.sub,
+      'x-portal-user-email': payload.email,
+      'x-portal-user-groups': Array.isArray(payload.groups) ? payload.groups.join(',') : '(none)',
+    },
+  })
+
+  return NextResponse.next({ request: { headers: forwardedHeaders } })
 }
 
 export const config = {

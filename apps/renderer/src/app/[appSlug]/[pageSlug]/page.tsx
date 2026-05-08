@@ -97,7 +97,21 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
   // Extract user info injected by middleware
   const headerStore = await headers()
   const userId = headerStore.get('x-portal-user-id') ?? undefined
+  const userEmail = headerStore.get('x-portal-user-email') ?? undefined
+  const userGroupsRaw = headerStore.get('x-portal-user-groups') ?? ''
+  const userGroups = userGroupsRaw ? userGroupsRaw.split(',').filter(Boolean) : []
   const token = headerStore.get('x-portal-token') ?? undefined
+
+  // ── DEBUG — temporary diagnostic, remove after verifying middleware headers
+  if (process.env['NODE_ENV'] !== 'production') {
+    // eslint-disable-next-line no-console
+    console.log('[renderer page]', {
+      userId,
+      userEmail,
+      userGroups,
+      tokenLen: token?.length,
+    })
+  }
 
   // URL params from the page route (for binding resolution)
   const urlParams: Record<string, string> = {
@@ -122,12 +136,16 @@ export default async function PortalPage({ params }: PageProps): Promise<React.R
       <AuthProvider
         initialToken={token}
         initialUserId={userId}
+        initialUserEmail={userEmail}
+        initialUserGroups={userGroups}
       >
         <BindingProvider
           schema={schema}
           urlParams={urlParams}
           sessionToken={token}
           userId={userId}
+          userEmail={userEmail}
+          userGroups={userGroups}
           appId={data.deployment.appId}
         >
           <ActionProvider
