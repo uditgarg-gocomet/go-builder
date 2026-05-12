@@ -45,6 +45,11 @@ function NodeRendererImpl({ nodeId, depth = 0 }: NodeRendererProps): React.React
   const Component = resolvePrimitive(node.type)
   const isContainer = CONTAINER_TYPES.has(node.type)
 
+  // Strip `children` from props — the canvas manages children via childMap,
+  // so a stale `children` prop value from the AI schema must not leak into
+  // the component and potentially be treated as a React element type.
+  const { children: _stripChildren, ...safeProps } = resolvedProps
+
   // Inner children — passed to the component when it's a true container.
   let innerChildren: React.ReactNode = null
   if (isContainer) {
@@ -95,7 +100,7 @@ function NodeRendererImpl({ nodeId, depth = 0 }: NodeRendererProps): React.React
   ) : null
 
   const rendered = Component ? (
-    <Component {...resolvedProps} style={node.style}>
+    <Component {...safeProps} style={node.style}>
       {innerChildren}
     </Component>
   ) : (

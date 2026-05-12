@@ -32,6 +32,7 @@ import { PromoteDialog } from '@/components/publish/PromoteDialog'
 import { VersionHistoryPanel } from '@/components/publish/VersionHistoryPanel'
 import { AppSettingsModal } from '@/components/app-settings/AppSettingsModal'
 import { CanvasJsonPanel } from '@/components/debug/CanvasJsonPanel'
+import { AIGeneratePanel } from '@/components/ai/AIGeneratePanel'
 import { CanvasChrome } from '@/components/layout/CanvasChrome'
 import { HeaderPropsPanel } from '@/components/layout/HeaderPropsPanel'
 import { NavPropsPanel } from '@/components/layout/NavPropsPanel'
@@ -152,6 +153,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
   // settings / history / props editor). Toggling it from the header mirrors
   // the existing pattern for those panels.
   const [jsonOpen, setJsonOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
 
   // Auto-save (page canvas). Also writes into useSaveStatusStore so chrome
   // edits can surface in the same top-right indicator.
@@ -317,7 +319,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
 
           <button
             type="button"
-            onClick={() => setSettingsOpen(o => !o)}
+            onClick={() => { setSettingsOpen(o => !o); setHistoryOpen(false); setJsonOpen(false); setAiOpen(false) }}
             title="Page settings"
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               settingsOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -328,7 +330,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
 
           <button
             type="button"
-            onClick={() => setHistoryOpen(o => !o)}
+            onClick={() => { setHistoryOpen(o => !o); setSettingsOpen(false); setJsonOpen(false); setAiOpen(false) }}
             title="Version history"
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               historyOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -339,13 +341,24 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
 
           <button
             type="button"
-            onClick={() => setJsonOpen(o => !o)}
+            onClick={() => { setJsonOpen(o => !o); setSettingsOpen(false); setHistoryOpen(false); setAiOpen(false) }}
             title="Inspect canvas JSON"
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               jsonOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
           >
             JSON
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setAiOpen(o => !o); setSettingsOpen(false); setHistoryOpen(false); setJsonOpen(false) }}
+            title="Nova — AI page generator"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              aiOpen ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+          >
+            Nova
           </button>
 
           <button
@@ -387,7 +400,7 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             )}
           </div>
 
-          {/* Right: chrome panel > settings > history > props editor */}
+          {/* Right: chrome panel > settings > history > json > AI > props editor */}
           {layoutSelection.kind === 'header' ? (
             <HeaderPropsPanel appId={app.id} />
           ) : layoutSelection.kind === 'nav' || layoutSelection.kind === 'nav-item' ? (
@@ -398,6 +411,8 @@ export function EditorShell({ app, initialPages, token }: EditorShellProps): Rea
             <VersionHistoryPanel userId={userId} />
           ) : jsonOpen ? (
             <CanvasJsonPanel onClose={() => setJsonOpen(false)} />
+          ) : aiOpen ? (
+            <AIGeneratePanel appId={app.id} onClose={() => setAiOpen(false)} />
           ) : (
             <PropsEditor />
           )}
