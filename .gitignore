@@ -46,8 +46,16 @@ instructions.md
 progress.md
 PROGRESS.md
 
-# Scripts
-scripts/build-shipments-view.py
+# POC demo/seed scripts (gocomet-specific, not part of the core builder)
+scripts/
+
+# IDE / tooling
+.kiro/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
 
 # Claude data
 .claude/
